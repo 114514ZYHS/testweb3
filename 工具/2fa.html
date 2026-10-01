@@ -1,0 +1,578 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>F2A 验证器</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+<style>
+    * { box-sizing: border-box; }
+    body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        max-width: 800px;
+        margin: 40px auto;
+        padding: 0 20px;
+        background: #f0f2f5;
+        color: #1e1e1e;
+        position: relative;
+        min-height: 100vh;
+    }
+    body::before {
+        content: "";
+        position: fixed;
+        inset: 0;
+        background:
+            linear-gradient(rgba(0, 0, 0, 0.62), rgba(0, 0, 0, 0.62)),
+            url("../bg.png") center center / cover no-repeat;
+        background-color: #000000;
+        opacity: 1;
+        z-index: -1;
+        pointer-events: none;
+    }
+    .back-link {
+        display: inline-block;
+        margin-bottom: 16px;
+        color: #0969da;
+        text-decoration: none;
+        font-weight: 500;
+    }
+    .back-link:hover { text-decoration: underline; }
+    h1 {
+        font-size: 32px;
+        font-weight: 600;
+        border-bottom: 2px solid #d0d7de;
+        padding-bottom: 12px;
+        margin-bottom: 8px;
+    }
+    .sub {
+        color: #57606a;
+        font-size: 16px;
+        margin-bottom: 30px;
+    }
+    .panel {
+        background: #ffffff;
+        background: rgba(255, 255, 255, 0.88);
+        border: 1px solid #d0d7de;
+        padding: 24px 26px 26px;
+    }
+    .field-label {
+        display: block;
+        font-size: 14px;
+        font-weight: 500;
+        color: #24292e;
+        margin-bottom: 8px;
+    }
+    input[type="text"] {
+        width: 100%;
+        font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+        font-size: 16px;
+        letter-spacing: 1px;
+        padding: 11px 14px;
+        border: 1px solid #d0d7de;
+        background: #ffffff;
+        background: rgba(255, 255, 255, 0.85);
+        color: #1e1e1e;
+        border-radius: 0;
+        outline: none;
+        text-transform: uppercase;
+    }
+    input[type="text"]:focus { border-color: #0969da; }
+    input[type="text"]::placeholder {
+        color: #8b949e;
+        font-size: 14px;
+        letter-spacing: 0.5px;
+        text-transform: none;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+    .hint {
+        font-size: 13px;
+        color: #57606a;
+        margin-top: 7px;
+    }
+    .hint b { color: #0969da; font-weight: 600; }
+    .divider {
+        border: none;
+        border-top: 1px solid #e1e4e8;
+        margin: 24px 0;
+    }
+    .row-head {
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+        margin-bottom: 8px;
+    }
+    .row-head .lbl {
+        font-size: 14px;
+        font-weight: 500;
+        color: #24292e;
+    }
+    .row-head .time {
+        font-size: 14px;
+        font-weight: 600;
+        color: #0969da;
+        font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+        font-variant-numeric: tabular-nums;
+        min-width: 58px;
+        text-align: right;
+    }
+    .track {
+        width: 100%;
+        height: 8px;
+        background: #e1e4e8;
+        overflow: hidden;
+    }
+    .bar {
+        height: 100%;
+        width: 100%;
+        background: #2da44e;
+        transition: none;
+        will-change: width;
+    }
+    .bar.warning { background: #bf8700; }
+    .bar.danger { background: #cf222e; }
+    .code-block {
+        text-align: center;
+        padding: 4px 0 0;
+    }
+    .code-label {
+        font-size: 13px;
+        color: #57606a;
+        letter-spacing: 0.5px;
+        margin-bottom: 10px;
+    }
+    .code-box {
+        display: inline-block;
+        position: relative;
+        font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+        font-size: 46px;
+        font-weight: 700;
+        letter-spacing: 6px;
+        color: #1e1e1e;
+        background: #f6f8fa;
+        background: rgba(246, 248, 250, 0.9);
+        border: 1px dashed #d0d7de;
+        padding: 14px 22px;
+        min-width: 220px;
+        cursor: pointer;
+        user-select: none;
+    }
+    .code-box:hover { background: #eef1f4; border-color: #0969da; }
+    .code-box:active { background: #e6e9ec; }
+    .code-box .tip {
+        position: absolute;
+        bottom: -26px;
+        left: 50%;
+        transform: translateX(-50%);
+        font-size: 12px;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        font-weight: 400;
+        letter-spacing: 0.3px;
+        color: #8b949e;
+        white-space: nowrap;
+        opacity: 0;
+        transition: opacity 0.2s ease;
+        pointer-events: none;
+    }
+    .code-box:hover .tip { opacity: 1; }
+    .code-box .ph {
+        font-size: 20px;
+        font-weight: 400;
+        color: #8b949e;
+        letter-spacing: 2px;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+    .code-box .flash {
+        position: absolute;
+        top: -12px;
+        left: 50%;
+        transform: translate(-50%, -100%);
+        background: #2da44e;
+        color: #fff;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        font-size: 13px;
+        font-weight: 500;
+        letter-spacing: 0.5px;
+        padding: 5px 14px;
+        white-space: nowrap;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.2s ease;
+    }
+    .code-box .flash.show { opacity: 1; }    .status {
+        text-align: center;
+        margin-top: 20px;
+        font-size: 13px;
+        color: #8b949e;
+        min-height: 20px;
+    }
+    .status.active { color: #1a7f37; }
+    .status.error { color: #cf222e; }
+    .footer {
+        margin-top: 40px;
+        text-align: center;
+        font-size: 14px;
+        color: #8b949e;
+        border-top: 1px solid #d0d7de;
+        padding-top: 16px;
+    }
+    @media (prefers-color-scheme: dark) {
+        body { background: #0d1117; color: #c9d1d9; }
+        body::before {
+            background:
+                linear-gradient(rgba(0, 0, 0, 0.72), rgba(0, 0, 0, 0.72)),
+                url("../bg.png") center center / cover no-repeat;
+        }
+        .panel { background: #161b22; border-color: #30363d; background: rgba(22, 27, 34, 0.88); }
+        .field-label, .row-head .lbl { color: #c9d1d9; }
+        input[type="text"] { background: #0d1117; border-color: #30363d; color: #c9d1d9; background: rgba(13, 17, 23, 0.85); }
+        .divider { border-top-color: #30363d; }
+        .track { background: #30363d; }
+        .code-box { background: #0d1117; border-color: #30363d; color: #c9d1d9; background: rgba(13, 17, 23, 0.85); }
+        .code-box:hover { background: #161b22; }
+        .footer { border-top-color: #30363d; color: #8b949e; }
+        h1 { border-bottom-color: #30363d; }
+    }
+    @media (max-width: 520px) {
+        h1 { font-size: 26px; }
+        .panel { padding: 18px 16px 20px; }
+        .code-box { font-size: 34px; letter-spacing: 4px; padding: 12px 16px; min-width: 170px; }
+    }
+    @media (max-width: 380px) {
+        .code-box { font-size: 27px; letter-spacing: 3px; padding: 10px 12px; min-width: 140px; }
+    }
+</style>
+</head>
+<body>
+
+    <a href="../index.html" class="back-link">← 返回主页</a>
+    <h1>F2A 验证器</h1>
+    <div class="sub">谷歌两步验证码生成 · 纯本地计算</div>
+
+    <div class="panel">
+        <label class="field-label" for="secretInput">密钥</label>
+        <input
+            id="secretInput"
+            type="text"
+            placeholder="例如 JBSWY3DPEHPK3PXP"
+            autocomplete="off"
+            spellcheck="false"
+            aria-describedby="hintText"
+        />
+        <div class="hint" id="hintText">输入 Google 身份验证器中的 <b>Base32</b> 密钥</div>
+
+        <hr class="divider">
+
+        <div class="row-head">
+            <span class="lbl">倒计时</span>
+            <span class="time" id="timeRemain">30.0s</span>
+        </div>
+        <div class="track" role="progressbar" aria-valuenow="30" aria-valuemin="0" aria-valuemax="30" id="progressTrack">
+            <div class="bar" id="progressBar" style="width: 100%;"></div>
+        </div>
+
+        <hr class="divider">
+
+        <div class="code-block">
+            <div class="code-label">一次性验证码</div>
+            <div class="code-box" id="codeDisplay" role="button" tabindex="0" aria-label="点击复制验证码">
+                <span class="ph" id="codeText">— — — — — —</span>
+                <span class="tip">点击复制</span>
+                <span class="flash" id="copyFeedback">已复制</span>
+            </div>
+            <div class="status" id="statusMessage">等待输入密钥…</div>
+        </div>
+    </div>
+
+    <div class="footer">ye1.cc.cd · ZYHS</div>
+
+    <script>
+        (function() {
+            'use strict';
+
+            // ---- DOM refs ----
+            const secretInput = document.getElementById('secretInput');
+            const codeText = document.getElementById('codeText');
+            const codeDisplay = document.getElementById('codeDisplay');
+            const progressBar = document.getElementById('progressBar');
+            const timeRemain = document.getElementById('timeRemain');
+            const statusMsg = document.getElementById('statusMessage');
+            const copyFeedback = document.getElementById('copyFeedback');
+            const progressTrack = document.getElementById('progressTrack');
+
+            // ---- 常量 ----
+            const STEP = 30; // 30 秒
+            const DIGITS = 6;
+            const BASE32_ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
+
+            // ---- 状态 ----
+            let currentSecret = '';
+            let validSecret = false;
+            let currentCode = '';
+            let copyTimerId = null;
+            let lastStep = -1;
+            let animFrameId = null;
+
+            // ---- Base32 解码 ----
+            function base32Decode(encoded) {
+                let clean = encoded.replace(/\s/g, '').toUpperCase();
+                clean = clean.replace(/=+$/, '');
+                if (clean.length === 0) return new Uint8Array(0);
+
+                for (let i = 0; i < clean.length; i++) {
+                    if (BASE32_ALPHABET.indexOf(clean[i]) === -1) {
+                        throw new Error('包含非法 Base32 字符');
+                    }
+                }
+
+                const bits = [];
+                for (let i = 0; i < clean.length; i++) {
+                    const val = BASE32_ALPHABET.indexOf(clean[i]);
+                    for (let b = 4; b >= 0; b--) {
+                        bits.push((val >> b) & 1);
+                    }
+                }
+
+                const bytes = [];
+                for (let i = 0; i + 7 < bits.length; i += 8) {
+                    let byte = 0;
+                    for (let b = 0; b < 8; b++) {
+                        byte = (byte << 1) | bits[i + b];
+                    }
+                    bytes.push(byte);
+                }
+
+                return new Uint8Array(bytes);
+            }
+
+            // ---- TOTP 生成 ----
+            function generateTOTP(secretBase32, timeStep) {
+                let keyBytes;
+                try {
+                    keyBytes = base32Decode(secretBase32);
+                } catch (e) {
+                    throw new Error('密钥解码失败: ' + e.message);
+                }
+                if (keyBytes.length === 0) {
+                    throw new Error('密钥不能为空');
+                }
+
+                const timeBytes = new Uint8Array(8);
+                for (let i = 7; i >= 0; i--) {
+                    timeBytes[i] = timeStep & 0xff;
+                    timeStep = Math.floor(timeStep / 256);
+                }
+
+                const keyWordArray = CryptoJS.lib.WordArray.create(keyBytes);
+                const timeWordArray = CryptoJS.lib.WordArray.create(timeBytes);
+                const hmac = CryptoJS.HmacSHA1(timeWordArray, keyWordArray);
+                const hash = hmac.words;
+
+                const hashBytes = [];
+                for (let i = 0; i < hash.length; i++) {
+                    const w = hash[i];
+                    hashBytes.push((w >> 24) & 0xff);
+                    hashBytes.push((w >> 16) & 0xff);
+                    hashBytes.push((w >> 8) & 0xff);
+                    hashBytes.push(w & 0xff);
+                }
+                const fullHash = new Uint8Array(hashBytes.slice(0, 20));
+
+                const offset = fullHash[19] & 0x0f;
+                const binCode = ((fullHash[offset] & 0x7f) << 24) |
+                    ((fullHash[offset + 1] & 0xff) << 16) |
+                    ((fullHash[offset + 2] & 0xff) << 8) |
+                    (fullHash[offset + 3] & 0xff);
+
+                const otp = binCode % Math.pow(10, DIGITS);
+                return String(otp).padStart(DIGITS, '0');
+            }
+
+            // ---- 验证密钥 ----
+            function validateSecret(input) {
+                const cleaned = input.replace(/\s/g, '').toUpperCase();
+                if (cleaned.length === 0) {
+                    return { valid: false, cleaned: '' };
+                }
+                const validChars = /^[A-Z2-7]+$/.test(cleaned);
+                if (!validChars) {
+                    return { valid: false, cleaned: cleaned };
+                }
+                try {
+                    const bytes = base32Decode(cleaned);
+                    if (bytes.length === 0) {
+                        return { valid: false, cleaned: cleaned };
+                    }
+                    return { valid: true, cleaned: cleaned };
+                } catch (e) {
+                    return { valid: false, cleaned: cleaned };
+                }
+            }
+
+            // ---- 处理输入 ----
+            function handleInput() {
+                const raw = secretInput.value;
+                const result = validateSecret(raw);
+
+                if (result.valid) {
+                    currentSecret = result.cleaned;
+                    validSecret = true;
+                    if (secretInput.value !== currentSecret) {
+                        secretInput.value = currentSecret;
+                    }
+                    statusMsg.textContent = '密钥有效，正在生成…';
+                    statusMsg.className = 'status active';
+                    lastStep = -1; // 强制下一帧刷新OTP
+                } else {
+                    currentSecret = '';
+                    validSecret = false;
+                    currentCode = '';
+                    codeText.textContent = '— — — — — —';
+                    codeText.className = 'ph';
+                    if (raw.trim().length > 0) {
+                        statusMsg.textContent = '密钥格式无效，请检查 Base32';
+                        statusMsg.className = 'status error';
+                    } else {
+                        statusMsg.textContent = '等待输入密钥…';
+                        statusMsg.className = 'status';
+                    }
+                }
+            }
+
+            // ---- 复制功能 ----
+            function copyCode() {
+                if (!currentCode || !validSecret) {
+                    statusMsg.textContent = '没有可复制的验证码';
+                    statusMsg.className = 'status error';
+                    return;
+                }
+
+                if (navigator.clipboard && navigator.clipboard.writeText) {
+                    navigator.clipboard.writeText(currentCode).then(() => {
+                        showCopyFeedback();
+                    }).catch(() => {
+                        fallbackCopy();
+                    });
+                } else {
+                    fallbackCopy();
+                }
+            }
+
+            function fallbackCopy() {
+                try {
+                    const textarea = document.createElement('textarea');
+                    textarea.value = currentCode;
+                    textarea.style.position = 'fixed';
+                    textarea.style.left = '-9999px';
+                    textarea.style.top = '-9999px';
+                    document.body.appendChild(textarea);
+                    textarea.select();
+                    document.execCommand('copy');
+                    document.body.removeChild(textarea);
+                    showCopyFeedback();
+                } catch (e) {
+                    statusMsg.textContent = '复制失败，请手动复制';
+                    statusMsg.className = 'status error';
+                }
+            }
+
+            function showCopyFeedback() {
+                copyFeedback.classList.add('show');
+                statusMsg.textContent = '已复制验证码: ' + currentCode;
+                statusMsg.className = 'status active';
+                if (copyTimerId) clearTimeout(copyTimerId);
+                copyTimerId = setTimeout(() => {
+                    copyFeedback.classList.remove('show');
+                }, 1600);
+            }
+
+            // ---- 动画循环 (平滑流动) ----
+            function animationTick() {
+                const nowInSeconds = Date.now() / 1000;
+                const currentStep = Math.floor(nowInSeconds / STEP);
+                const elapsed = nowInSeconds - currentStep * STEP;
+                const remaining = Math.max(0, STEP - elapsed);
+
+                // 更新进度条 (连续变化)
+                const percent = (remaining / STEP) * 100;
+                progressBar.style.width = percent + '%';
+                progressTrack.setAttribute('aria-valuenow', Math.round(remaining));
+
+                // 时间显示精确到小数点后一位
+                timeRemain.textContent = remaining.toFixed(1) + 's';
+
+                // 进度条颜色
+                progressBar.className = 'bar';
+                if (remaining <= 5) {
+                    progressBar.classList.add('danger');
+                } else if (remaining <= 10) {
+                    progressBar.classList.add('warning');
+                }
+
+                // 仅在时间步进变化时更新OTP
+                if (validSecret && currentSecret && currentStep !== lastStep) {
+                    lastStep = currentStep;
+                    try {
+                        currentCode = generateTOTP(currentSecret, currentStep);
+                        codeText.textContent = currentCode;
+                        codeText.className = '';
+                        statusMsg.textContent = '验证码已更新，点击复制';
+                        statusMsg.className = 'status active';
+                    } catch (e) {
+                        codeText.textContent = '错误';
+                        codeText.className = 'ph';
+                        statusMsg.textContent = '密钥无效: ' + e.message;
+                        statusMsg.className = 'status error';
+                        currentCode = '';
+                        validSecret = false;
+                    }
+                }
+
+                animFrameId = requestAnimationFrame(animationTick);
+            }
+
+            function startAnimation() {
+                if (animFrameId) {
+                    cancelAnimationFrame(animFrameId);
+                }
+                animFrameId = requestAnimationFrame(animationTick);
+            }
+
+            // ---- 页面可见性变化 ----
+            document.addEventListener('visibilitychange', function() {
+                if (document.hidden) {
+                    if (animFrameId) {
+                        cancelAnimationFrame(animFrameId);
+                        animFrameId = null;
+                    }
+                } else {
+                    // 页面恢复时，重置步进检查，防止因休眠导致的跳跃
+                    lastStep = -1;
+                    startAnimation();
+                }
+            });
+
+            // ---- 初始化 ----
+            function init() {
+                secretInput.addEventListener('input', handleInput);
+                codeDisplay.addEventListener('click', copyCode);
+                codeDisplay.addEventListener('keydown', function(e) {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        copyCode();
+                    }
+                });
+
+                // 启动平滑动画，即使没有密钥也显示流动的倒计时
+                startAnimation();
+            }
+
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', init);
+            } else {
+                init();
+            }
+        })();
+    </script>
+
+</body>
+</html>
