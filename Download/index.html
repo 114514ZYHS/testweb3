@@ -1,0 +1,567 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Download - ZYHS</title>
+<style>
+    * { box-sizing: border-box; }
+    body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        margin: 0;
+        padding: 0;
+        background: #f0f2f5;
+        color: #1e1e1e;
+        position: relative;
+        min-height: 100vh;
+    }
+    body::before {
+        content: "";
+        position: fixed;
+        inset: 0;
+        background:
+            linear-gradient(rgba(0, 0, 0, 0.62), rgba(0, 0, 0, 0.62)),
+            url("../bg.png") center center / cover no-repeat;
+        background-color: #000000;
+        opacity: 1;
+        z-index: -1;
+        pointer-events: none;
+    }
+    .page {
+        max-width: 1040px;
+        margin: 0 auto;
+        padding: 24px 20px 40px;
+    }
+    h1 {
+        font-size: 26px;
+        font-weight: 600;
+        border-bottom: 2px solid #d0d7de;
+        padding-bottom: 10px;
+        margin: 0 0 6px;
+    }
+    .sub {
+        color: #57606a;
+        font-size: 14px;
+        margin-bottom: 16px;
+    }
+    .back-link {
+        display: inline-block;
+        margin-bottom: 12px;
+        color: #0969da;
+        text-decoration: none;
+        font-weight: 500;
+        font-size: 14px;
+    }
+    .back-link:hover { text-decoration: underline; }
+
+    /* ---------- 工具栏 ---------- */
+    .toolbar {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 8px;
+        background: rgba(255, 255, 255, 0.82);
+        border: 1px solid #d0d7de;
+        border-bottom: none;
+        padding: 8px 10px;
+    }
+    .tb-btn {
+        font: inherit;
+        font-size: 13px;
+        color: #24292f;
+        background: #f6f8fa;
+        border: 1px solid #d0d7de;
+        padding: 5px 12px;
+        cursor: pointer;
+        user-select: none;
+    }
+    .tb-btn:hover { background: #eef1f4; }
+    .tb-btn.active {
+        background: #0969da;
+        border-color: #0969da;
+        color: #ffffff;
+    }
+    .tb-sep {
+        width: 1px;
+        align-self: stretch;
+        background: #d0d7de;
+        margin: 2px 2px;
+    }
+    .tb-spacer { flex: 1 1 auto; }
+    .search-box {
+        font: inherit;
+        font-size: 13px;
+        padding: 5px 9px;
+        border: 1px solid #d0d7de;
+        background: #ffffff;
+        color: inherit;
+        width: 190px;
+    }
+    .search-box:focus { outline: 2px solid #0969da; outline-offset: -1px; }
+    .path-bar {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        background: rgba(255, 255, 255, 0.82);
+        border: 1px solid #d0d7de;
+        border-bottom: none;
+        padding: 7px 12px;
+        font-size: 13px;
+        font-family: monospace;
+        color: #57606a;
+    }
+    .path-bar .crumb { color: #0969da; text-decoration: none; }
+    .path-bar .crumb:hover { text-decoration: underline; }
+
+    /* ---------- 主区域 ---------- */
+    .panel {
+        background: rgba(255, 255, 255, 0.9);
+        border: 1px solid #d0d7de;
+        min-height: 340px;
+    }
+    .status-bar {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 14px;
+        background: rgba(255, 255, 255, 0.82);
+        border: 1px solid #d0d7de;
+        border-top: none;
+        padding: 6px 12px;
+        font-size: 12px;
+        color: #57606a;
+        font-family: monospace;
+    }
+
+    /* ---------- 列表视图（唯一的视图，横排列表） ---------- */
+    .list-view { display: table; width: 100%; border-collapse: collapse; font-size: 13px; }
+    .list-view th {
+        text-align: left;
+        font-weight: 600;
+        padding: 8px 12px;
+        border-bottom: 1px solid #d0d7de;
+        background: #f6f8fa;
+        color: #57606a;
+        white-space: nowrap;
+        user-select: none;
+    }
+    .list-view th.sortable { cursor: pointer; }
+    .list-view th.sortable:hover { color: #0969da; }
+    .list-view td {
+        padding: 7px 12px;
+        border-bottom: 1px solid #e1e4e8;
+        vertical-align: middle;
+    }
+    .list-view tr:last-child td { border-bottom: none; }
+    .list-view tr.row:hover { background: #eaf2fd; cursor: pointer; }
+    .list-name { display: flex; align-items: center; gap: 10px; }
+    .list-name .glyph { font-size: 22px; width: 44px; text-align: center; flex: 0 0 44px; }
+
+    /* 横排预览缩略图：图片显示真实小图，其他格式显示大图标 */
+    .list-name .mini-thumb {
+        width: 44px; height: 44px; object-fit: cover;
+        border: 1px solid #e1e4e8; flex: 0 0 44px; display: block;
+    }
+    .name-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+    .name-main { color: #1e1e1e; }
+    .name-sub { font-size: 11px; color: #8b949e; }
+
+    .col-size, .col-date { color: #57606a; font-family: monospace; white-space: nowrap; }
+    .col-type { color: #57606a; white-space: nowrap; }
+    .col-act { width: 1%; white-space: nowrap; text-align: right; }
+
+    /* 行尾的下载按钮：点击只下载，不触发行点击跳转 */
+    .dl-btn {
+        font: inherit;
+        font-size: 12px;
+        color: #0969da;
+        background: #ffffff;
+        border: 1px solid #d0d7de;
+        padding: 4px 12px;
+        cursor: pointer;
+        text-decoration: none;
+        display: inline-block;
+        white-space: nowrap;
+    }
+    .dl-btn:hover { background: #0969da; border-color: #0969da; color: #ffffff; }
+
+    .empty-tip {
+        padding: 60px 20px;
+        text-align: center;
+        color: #8b949e;
+        font-size: 14px;
+    }
+
+    .footer {
+        margin-top: 28px;
+        text-align: center;
+        font-size: 13px;
+        color: #8b949e;
+        border-top: 1px solid #d0d7de;
+        padding-top: 14px;
+    }
+
+    @media (prefers-color-scheme: dark) {
+        body { background: #0d1117; color: #c9d1d9; }
+        body::before {
+            background:
+                linear-gradient(rgba(0, 0, 0, 0.72), rgba(0, 0, 0, 0.72)),
+                url("../bg.png") center center / cover no-repeat;
+        }
+        h1 { border-bottom-color: #30363d; }
+        .sub, .back-link { color: #8b949e; }
+        .back-link { color: #58a6ff; }
+        .toolbar, .path-bar, .panel, .status-bar {
+            background: rgba(22, 27, 34, 0.85);
+            border-color: #30363d;
+        }
+        .tb-btn { background: #21262d; border-color: #30363d; color: #c9d1d9; }
+        .tb-btn:hover { background: #30363d; }
+        .tb-btn.active { background: #1f6feb; border-color: #1f6feb; color: #fff; }
+        .tb-sep, .path-bar .crumb { border-color: #30363d; }
+        .path-bar .crumb { color: #58a6ff; }
+        .search-box { background: #0d1117; border-color: #30363d; color: #c9d1d9; }
+        .list-view th { background: #161b22; border-bottom-color: #30363d; color: #8b949e; }
+        .list-view td { border-bottom-color: #30363d; }
+        .list-view tr.row:hover { background: #1c2b3a; }
+        .list-name .mini-thumb { border-color: #30363d; }
+        .name-main { color: #c9d1d9; }
+        .col-size, .col-date, .col-type { color: #8b949e; }
+        .dl-btn { background: #21262d; border-color: #30363d; color: #58a6ff; }
+        .dl-btn:hover { background: #1f6feb; border-color: #1f6feb; color: #ffffff; }
+        .footer { border-top-color: #30363d; }
+    }
+    @media (max-width: 620px) {
+        .search-box { width: 100%; }
+        .col-type { display: none; }
+        .list-view th.col-type { display: none; }
+    }
+</style>
+</head>
+<body>
+<div class="page">
+    <a href="../index.html" class="back-link">&larr; 返回主页</a>
+    <h1>Download</h1>
+    <div class="sub">文件浏览与下载 &mdash; 点击文件名可打开，点右侧按钮下载</div>
+
+    <div class="toolbar">
+        <button type="button" class="tb-btn" id="btnBack">↑ 上一级</button>
+        <button type="button" class="tb-btn" id="btnRefresh">刷新</button>
+        <span class="tb-spacer"></span>
+        <input type="text" class="search-box" id="search" placeholder="搜索文件名…">
+    </div>
+
+    <div class="path-bar">
+        <span>位置:</span>
+        <a href="../index.html" class="crumb">ZYHS</a>
+        <span>/</span>
+        <span class="crumb" style="color:#1e1e1e;text-decoration:none;">Download</span>
+    </div>
+
+    <div class="panel">
+        <table class="list-view" id="listView">
+            <thead>
+                <tr>
+                    <th class="sortable" data-sort="name">名称</th>
+                    <th class="sortable col-size" data-sort="size">大小</th>
+                    <th class="col-type">类型</th>
+                    <th class="sortable col-date" data-sort="date">修改日期</th>
+                    <th class="col-act">操作</th>
+                </tr>
+            </thead>
+            <tbody id="listBody"></tbody>
+        </table>
+        <div class="empty-tip" id="emptyTip" style="display:none;">没有匹配的文件</div>
+    </div>
+
+    <div class="status-bar">
+        <span id="statCount">0 个项目</span>
+        <span id="statSize"></span>
+        <span id="statSel"></span>
+    </div>
+
+    <div class="footer">ye1.cc.cd · ZYHS</div>
+</div>
+
+<script>
+/* =========================================================================
+   文件清单
+   -------------------------------------------------------------------------
+   要新增一个可下载文件，只需两步：
+   1) 把文件放进本目录（Download/）；
+   2) 在下面 FILES 数组里加一条记录。
+   图片只要写 type:"image" 就会自动生成缩略图，不用额外准备小图。
+   ⚠️ 例外：图片本身很大（十几 MB 以上）时，缩略图默认会直接加载原图，
+      为了画一个 44×44 的小方块把整个文件拉下来，手机上很浪费。
+      这种情况先压一张小图放进本目录，然后在记录里加一行 thumb:"小图文件名"。
+   拿不到精确大小时 size 可以留 0，页面会显示为 "—"。
+   ========================================================================= */
+var FILES = [
+    {
+        name: "chinese-mindmap.jpg",
+        title: "语文手法思维导图",
+        desc: "语文表现手法整理",
+        type: "image",
+        size: 388741,
+        date: "2026-09-13",
+        w: 1520, h: 2144
+    },
+    {
+        name: "thinking-chain-prompt.jpg",
+        title: "思考链重复指令",
+        desc: "提示词记录",
+        type: "image",
+        size: 441625,
+        date: "2026-09-13",
+        w: 1080, h: 2400
+    },
+    {
+        name: "city-aerial-view.jpg",
+        title: "城市航拍图",
+        desc: "俯瞰视角，可见操场与球场",
+        type: "image",
+        size: 130209,
+        date: "2026-09-13",
+        w: 854, h: 640
+    },
+    {
+        name: "deepsleep-logo.jpg",
+        title: "deepsleep 标志",
+        desc: "蓝鲸与 Zz 图案",
+        type: "image",
+        size: 42372,
+        date: "2026-09-13",
+        w: 1280, h: 1059
+    },
+    {
+        name: "oppo-80w-charger.jpg",
+        title: "OPPO 80W 充电头",
+        desc: "SuperVOOC 电源适配器实拍",
+        type: "image",
+        size: 94472,
+        date: "2026-09-13",
+        w: 1080, h: 1440
+    },
+    {
+        name: "20250404_173525_0003.JPG",
+        title: "实拍照片 0003",
+        desc: "4K 分辨率原始样张",
+        type: "image",
+        size: 4716984,
+        date: "2026-09-15",
+        w: 3840, h: 2160
+    },
+    {
+        name: "23c99eaa0c257b51d154235593c0b30c1630132346.jpg",
+        title: "竖版图片",
+        desc: "960 × 1280 竖构图",
+        type: "image",
+        size: 264631,
+        date: "2026-09-15",
+        w: 960, h: 1280
+    },
+    {
+        name: "mfrc522.pdf",
+        title: "MFRC522 资料",
+        desc: "RFID 读卡模块相关文档，72 页 A4",
+        type: "pdf",
+        size: 823748,
+        date: "2026-09-15"
+    },
+    {
+        name: "2158.zip",
+        title: "PCB 打样文件（Gerber）",
+        desc: "含钻孔、顶层/底层铜箔、丝印、阻焊、板框等全套 Gerber，另有下单说明",
+        type: "archive",
+        size: 225174,
+        date: "2026-09-15"
+    },
+    {
+        name: "adia64.apk",
+        title: "AIDA64 安卓版",
+        desc: "硬件检测工具安装包（APK）",
+        type: "exe",
+        size: 3252150,
+        date: "2026-09-15"
+    },
+    {
+        name: "Clash Meta for Android_2.11.23.apk",
+        title: "Clash Meta for Android 2.11.23",
+        desc: "安卓端客户端安装包，29.04 MB。开源项目（MetaCubeX/ClashMetaForAndroid，GPL-3.0）。安装时系统会提示「来自未知来源」，需要在设置里允许一次。",
+        type: "exe",
+        size: 30449135,
+        date: "2026-09-19"
+    },
+    {
+        name: "dji_fly_20260818_175456_65_1787047150223_photo.jpg",
+        title: "航拍原图 · 2026-08-18",
+        desc: "无人机直出原图，8064×6048，20.37 MB。文件较大，手机流量下自量。",
+        type: "image",
+        size: 20370301,
+        date: "2026-08-18",
+        w: 8064, h: 6048,
+        thumb: "dji_preview.jpg"
+    }
+];
+
+/* ---------- 文件类型识别 ---------- */
+var TYPE_MAP = {
+    image:   { label: "图片",   glyph: "🖼️" },
+    html:    { label: "网页",   glyph: "🌐" },
+    video:   { label: "视频",   glyph: "🎬" },
+    audio:   { label: "音频",   glyph: "🎵" },
+    pdf:     { label: "PDF",    glyph: "📕" },
+    archive: { label: "压缩包", glyph: "🗜️" },
+    text:    { label: "文本",   glyph: "📄" },
+    code:    { label: "代码",   glyph: "📜" },
+    doc:     { label: "文档",   glyph: "📘" },
+    sheet:   { label: "表格",   glyph: "📊" },
+    slides:  { label: "幻灯片", glyph: "📽️" },
+    font:    { label: "字体",   glyph: "🔤" },
+    exe:     { label: "程序",   glyph: "⚙️" },
+    other:   { label: "文件",   glyph: "📄" }
+};
+var EXT_MAP = {
+    jpg:"image", jpeg:"image", png:"image", gif:"image", webp:"image", bmp:"image",
+    svg:"image", ico:"image", avif:"image", tif:"image", tiff:"image",
+    html:"html", htm:"html",
+    mp4:"video", webm:"video", mkv:"video", mov:"video", avi:"video", m4v:"video",
+    mp3:"audio", wav:"audio", ogg:"audio", flac:"audio", m4a:"audio", aac:"audio", opus:"audio",
+    pdf:"pdf",
+    zip:"archive", rar:"archive", "7z":"archive", tar:"archive", gz:"archive", xz:"archive", bz2:"archive",
+    txt:"text", log:"text", md:"text", json:"text", csv:"text",
+    js:"code", css:"code", py:"code", ts:"code", c:"code", cpp:"code", h:"code", java:"code", sh:"code", xml:"code",
+    doc:"doc", docx:"doc", rtf:"doc",
+    xls:"sheet", xlsx:"sheet", ods:"sheet",
+    ppt:"slides", pptx:"slides", odp:"slides",
+    ttf:"font", otf:"font", woff:"font", woff2:"font",
+    exe:"exe", msi:"exe", apk:"exe", dmg:"exe", deb:"exe", appimage:"exe"
+};
+
+function extOf(name) {
+    var i = name.lastIndexOf(".");
+    return i < 0 ? "" : name.slice(i + 1).toLowerCase();
+}
+function typeOf(item) {
+    if (item.type && TYPE_MAP[item.type]) return item.type;
+    return EXT_MAP[extOf(item.name)] || "other";
+}
+function fmtSize(bytes) {
+    if (!bytes) return "—";
+    var u = ["B", "KB", "MB", "GB"];
+    var i = 0, n = bytes;
+    while (n >= 1024 && i < u.length - 1) { n /= 1024; i++; }
+    return (i === 0 ? n : n.toFixed(n >= 100 ? 0 : 1)) + " " + u[i];
+}
+function humanLabel(item) {
+    if (item.title) return item.title;
+    return item.name;
+}
+
+/* ---------- 渲染 ---------- */
+var state = { sortKey: "name", sortAsc: true, query: "" };
+
+function visibleFiles() {
+    var q = state.query.trim().toLowerCase();
+    var list = FILES.filter(function (it) {
+        if (!q) return true;
+        return it.name.toLowerCase().indexOf(q) >= 0 ||
+               (it.title || "").toLowerCase().indexOf(q) >= 0 ||
+               (it.desc || "").toLowerCase().indexOf(q) >= 0;
+    });
+    var dir = state.sortAsc ? 1 : -1;
+    var key = state.sortKey;
+    list.sort(function (a, b) {
+        var va, vb;
+        if (key === "size") { va = a.size || 0; vb = b.size || 0; }
+        else if (key === "date") { va = a.date || ""; vb = b.date || ""; }
+        else { va = a.name.toLowerCase(); vb = b.name.toLowerCase(); }
+        if (va < vb) return -1 * dir;
+        if (va > vb) return 1 * dir;
+        return 0;
+    });
+    return list;
+}
+
+/* 列表行：左侧预览（图片显示真实小图，其他格式显示图标），
+   中间是名称/说明，最右一列是下载按钮。
+   点整行 = 打开；点按钮 = 下载（按钮里 stopPropagation，不会同时打开）。 */
+function listRowHtml(it) {
+    var t = typeOf(it), meta = TYPE_MAP[t];
+    var url = encodeURI(it.name);
+    var lead;
+    if (t === "image") {
+        // 大图（比如 20MB 的航拍原片）别拿原图当缩略图，否则为了画个 44×44
+        // 的小方块要把整个文件拉下来。有 thumb 就用 thumb。
+        var thumbUrl = it.thumb ? encodeURI(it.thumb) : url;
+        lead = '<img class="mini-thumb" src="' + thumbUrl + '" alt="" loading="lazy">';
+    } else {
+        lead = '<span class="glyph">' + meta.glyph + '</span>';
+    }
+    var sub = it.desc ? '<span class="name-sub">' + it.desc + '</span>' : "";
+    return '<tr class="row" data-href="' + url + '" data-name="' +
+           it.name.replace(/"/g, "&quot;") + '" title="点击打开">' +
+           '<td><div class="list-name">' + lead +
+               '<span class="name-text"><span class="name-main">' + humanLabel(it) +
+               '</span>' + sub + '</span></div></td>' +
+           '<td class="col-size">' + fmtSize(it.size) + '</td>' +
+           '<td class="col-type">' + meta.label + '</td>' +
+           '<td class="col-date">' + (it.date || "—") + '</td>' +
+           '<td class="col-act"><a class="dl-btn" href="' + url +
+               '" download="' + it.name.replace(/"/g, "&quot;") + '">下载</a></td>' +
+           '</tr>';
+}
+
+function render() {
+    var list = visibleFiles();
+    var listBody = document.getElementById("listBody");
+    var emptyTip = document.getElementById("emptyTip");
+
+    listBody.innerHTML = list.map(listRowHtml).join("");
+    emptyTip.style.display = list.length ? "none" : "block";
+    document.getElementById("listView").style.display = list.length ? "table" : "none";
+
+    var total = 0;
+    list.forEach(function (it) { total += it.size || 0; });
+    document.getElementById("statCount").textContent = list.length + " 个项目";
+    document.getElementById("statSize").textContent = list.length ? ("合计 " + fmtSize(total)) : "";
+
+    // 整行点击 = 打开文件
+    Array.prototype.forEach.call(listBody.querySelectorAll("tr.row"), function (tr) {
+        tr.addEventListener("click", function () {
+            window.open(tr.getAttribute("data-href"), "_blank");
+        });
+    });
+    // 下载按钮：阻止冒泡，避免同时触发「打开」
+    Array.prototype.forEach.call(listBody.querySelectorAll(".dl-btn"), function (btn) {
+        btn.addEventListener("click", function (ev) {
+            ev.stopPropagation();
+        });
+    });
+}
+
+/* ---------- 交互绑定 ---------- */
+document.getElementById("btnBack").addEventListener("click", function () {
+    window.location.href = "../index.html";
+});
+document.getElementById("btnRefresh").addEventListener("click", function () {
+    window.location.reload();
+});
+document.getElementById("search").addEventListener("input", function () {
+    state.query = this.value;
+    render();
+});
+Array.prototype.forEach.call(document.querySelectorAll(".list-view th.sortable"), function (th) {
+    th.addEventListener("click", function () {
+        var k = th.getAttribute("data-sort");
+        if (state.sortKey === k) state.sortAsc = !state.sortAsc;
+        else { state.sortKey = k; state.sortAsc = true; }
+        render();
+    });
+});
+render();
+document.getElementById("statSel").textContent = "网站: ye1.cc.cd";
+
+render();
+</script>
+</body>
+</html>

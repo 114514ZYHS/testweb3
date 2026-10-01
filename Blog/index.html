@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Blog - ZYHS</title>
+<style>
+    * { box-sizing: border-box; }
+    body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        max-width: 800px;
+        margin: 40px auto;
+        padding: 0 20px;
+        background: #f0f2f5;
+        color: #1e1e1e;
+        position: relative;
+        min-height: 100vh;
+    }
+    body::before {
+        content: "";
+        position: fixed;
+        inset: 0;
+        background:
+            linear-gradient(rgba(0, 0, 0, 0.62), rgba(0, 0, 0, 0.62)),
+            url("../bg.png") center center / cover no-repeat;
+        background-color: #000000;
+        opacity: 1;
+        z-index: -1;
+        pointer-events: none;
+    }
+    h1 {
+        font-size: 32px;
+        font-weight: 600;
+        border-bottom: 2px solid #d0d7de;
+        padding-bottom: 12px;
+        margin-bottom: 8px;
+    }
+    .sub {
+        color: #57606a;
+        font-size: 16px;
+        margin-bottom: 30px;
+    }
+    .back-link {
+        display: inline-block;
+        margin-bottom: 16px;
+        color: #0969da;
+        text-decoration: none;
+        font-weight: 500;
+    }
+    .back-link:hover { text-decoration: underline; }
+    .group-title {
+        font-size: 15px;
+        font-weight: 600;
+        color: #1e1e1e;
+        margin: 30px 0 8px;
+        padding-left: 9px;
+        border-left: 3px solid #0969da;
+    }
+    .group-title:first-of-type { margin-top: 0; }
+    .group-note {
+        font-size: 13px;
+        color: #8b949e;
+        margin: 0 0 10px 12px;
+        font-family: monospace;
+    }
+    .post-list {
+        background: #ffffff;
+        border: 1px solid #d0d7de;
+        background: rgba(255, 255, 255, 0.82);
+    }
+    .post-item {
+        display: block;
+        padding: 18px 22px;
+        border-bottom: 1px solid #e1e4e8;
+        text-decoration: none;
+        color: inherit;
+    }
+    .post-item:last-child { border-bottom: none; }
+    .post-item:hover { background: #f6f8fa; }
+    .post-title {
+        font-size: 17px;
+        font-weight: 600;
+        color: #0969da;
+        margin-bottom: 5px;
+    }
+    .post-meta {
+        font-size: 13px;
+        color: #8b949e;
+        font-family: monospace;
+    }
+    .post-desc {
+        font-size: 14px;
+        color: #57606a;
+        margin-top: 6px;
+        line-height: 1.6;
+    }
+    .empty {
+        background: #ffffff;
+        border: 1px solid #d0d7de;
+        padding: 40px 22px;
+        text-align: center;
+        color: #8b949e;
+        font-size: 15px;
+        background: rgba(255, 255, 255, 0.82);
+    }
+    .footer {
+        margin-top: 40px;
+        text-align: center;
+        font-size: 14px;
+        color: #8b949e;
+        border-top: 1px solid #d0d7de;
+        padding-top: 16px;
+    }
+    @media (prefers-color-scheme: dark) {
+        body { background: #0d1117; color: #c9d1d9; }
+        body::before {
+            background:
+                linear-gradient(rgba(0, 0, 0, 0.72), rgba(0, 0, 0, 0.72)),
+                url("../bg.png") center center / cover no-repeat;
+        }
+        h1 { border-bottom-color: #30363d; }
+        .sub { color: #8b949e; }
+        .back-link { color: #58a6ff; }
+        .post-title { color: #58a6ff; }
+        .post-list, .empty { background: #161b22; border-color: #30363d; background: rgba(22, 27, 34, 0.85); }
+        .post-item { border-bottom-color: #30363d; }
+        .post-item:hover { background: #1c2128; }
+        .post-desc { color: #8b949e; }
+        .group-title { color: #c9d1d9; border-left-color: #58a6ff; }
+        .footer { border-top-color: #30363d; color: #8b949e; }
+    }
+
+        .note {
+            margin: 18px 0;
+            padding: 10px 14px;
+            background: #f6f8fa;
+            border-left: 3px solid #8b949e;
+            color: #24292f;
+            font-size: 15px;
+        }
+        @media (prefers-color-scheme: dark) {
+            .note { background: #161b22; border-left-color: #6e7681; color: #c9d1d9; }
+        }
+    </style>
+</head>
+<body>
+    <a href="../index.html" class="back-link">← 返回主页</a>
+    <h1>Blog</h1>
+    <div class="sub">随笔与记录 · 五个系列</div>
+
+    <div class="group-title">网络基础</div>
+    <div class="group-note">从域名解析到加密握手，一条链路拆开讲</div>
+    <div class="post-list">
+        <a href="dns-and-domain.html" class="post-item">
+            <div class="post-title">域名和 DNS：你按下回车之后的三百毫秒</div>
+            <div class="post-meta">2026-09-14 · 网络系列 · 第一篇</div>
+            <div class="post-desc">域名怎么拆、DNS 查询走几步、TTL 为什么重要、怎么用 nslookup 和 dig 自己查。</div>
+        </a>
+        <a href="network-request.html" class="post-item">
+            <div class="post-title">从敲下网址到看见页面：一次网络请求的完整旅程</div>
+            <div class="post-meta">2026-09-14 · 网络系列 · 第二篇</div>
+            <div class="post-desc">TCP 握手、TLS 握手、HTTP 收发、浏览器渲染，六个阶段各自会怎么坏掉。</div>
+        </a>
+        <a href="https-and-tls.html" class="post-item">
+            <div class="post-title">HTTPS 到底保护了什么——证书、加密与常见误解</div>
+            <div class="post-meta">2026-09-14 · 网络系列 · 第三篇</div>
+            <div class="post-desc">小锁不等于安全。证书解决的是"你是谁"，不是"你是好人"。</div>
+        </a>
+    </div>
+
+    <div class="group-title">API 与接口</div>
+    <div class="group-note">把服务写成别人愿意调的样子</div>
+    <div class="post-list">
+        <a href="http-status-codes.html" class="post-item">
+            <div class="post-title">状态码：服务器在跟你说什么</div>
+            <div class="post-meta">2026-09-14 · API 系列 · 第一篇</div>
+            <div class="post-desc">按责任方分类的三位数字。401 和 403 差在哪，502 和 504 差在哪。</div>
+        </a>
+        <a href="api-design.html" class="post-item">
+            <div class="post-title">API 设计：把接口写成别人愿意用的样子</div>
+            <div class="post-meta">2026-09-14 · API 系列 · 第二篇</div>
+            <div class="post-desc">资源与方法、错误响应结构、分页的两种做法、什么改动算破坏性。</div>
+        </a>
+        <a href="agent-api.html" class="post-item">
+            <div class="post-title">给 AI Agent 写一个 API：它和人类用起来有什么不一样</div>
+            <div class="post-meta">2026-09-14 · API 系列 · 第三篇</div>
+            <div class="post-desc">Agent 是最挑剔的调用方。工具粒度、描述文本、可重试标记该怎么设计。</div>
+        </a>
+    </div>
+
+    <div class="group-title">Agent 与 AI</div>
+    <div class="group-note">它是怎么自己动手的，以及在哪里会翻车</div>
+    <div class="post-list">
+        <a href="agent-tool-calling.html" class="post-item">
+            <div class="post-title">Agent 是怎么"动手"的——工具调用、上下文与循环</div>
+            <div class="post-meta">2026-09-14 · Agent 系列 · 第一篇</div>
+            <div class="post-desc">拆开那个 while 循环。模型为什么"无状态"，上下文为什么是最稀缺的资源。</div>
+        </a>
+        <a href="agent-pitfalls.html" class="post-item">
+            <div class="post-title">Agent 的坑：幻觉、循环、注入与越权</div>
+            <div class="post-meta">2026-09-14 · Agent 系列 · 第二篇</div>
+            <div class="post-desc">它有真实权限却没有常识。提示注入为什么难防，护栏要装在哪几处。</div>
+        </a>
+        <a href="trends.html" class="post-item">
+            <div class="post-title">现在与往后几年：几个看得见的方向</div>
+            <div class="post-meta">2026-09-18 · AI 系列 · 趋势</div>
+            <div class="post-desc">算力的账从训练转向推理、软件形态的变化、能源与监管。也写了我不确定的部分。</div>
+        </a>
+        <a href="ai-history.html" class="post-item">
+            <div class="post-title">人工智能是怎么一步步走到今天的</div>
+            <div class="post-meta">2026-09-14 · AI 系列 · 总览</div>
+            <div class="post-desc">三次浪潮、两次寒冬，为什么是 2017 年之后才真正爆发。不讲公式，把这条线索捋一遍。</div>
+        </a>
+        <a href="deepseek.html" class="post-item">
+            <div class="post-title">DeepSeek：一家「不差钱」的公司为什么改主意了</div>
+            <div class="post-meta">2026-09-14 · AI 系列 · 公司</div>
+            <div class="post-desc">低成本 + 开源是怎么做到的，以及它从「拒绝融资」到冲刺科创板的转身。</div>
+        </a>
+        <a href="openai.html" class="post-item">
+            <div class="post-title">OpenAI：从非营利实验室到 AI 巨头</div>
+            <div class="post-meta">2026-09-14 · AI 系列 · 公司</div>
+            <div class="post-desc">ChatGPT 的开创者，如今同时被成本、竞争、监管三面夹击。</div>
+        </a>
+        <a href="ai-and-work.html" class="post-item">
+            <div class="post-title">AI 会不会取代你的工作——说点实在的</div>
+            <div class="post-meta">2026-09-14 · AI 系列 · 影响</div>
+            <div class="post-desc">AI 取代的是「任务」不是「职业」。哪些活最危险，学生该注意什么。</div>
+        </a>
+    </div>
+
+    <div class="group-title">电脑硬件</div>
+    <div class="group-note">买之前该看什么，以及便宜货的代价</div>
+    <div class="post-list">
+        <a href="storage-hdd-ssd.html" class="post-item">
+            <div class="post-title">机械盘与固态盘：买之前该看的那几个参数</div>
+            <div class="post-meta">2026-09-19 · 硬件 · 存储</div>
+            <div class="post-desc">CMR 与 SMR 怎么分辨、SLC 缓存为什么会掉速、有缓无缓差在哪、什么场景选哪种。</div>
+        </a>
+        <a href="p106-mining-card.html" class="post-item">
+            <div class="post-title">P106-100：一百多块的「无头」显卡能用吗</div>
+            <div class="post-meta">2026-09-19 · 硬件 · 显卡</div>
+            <div class="post-desc">没有视频输出接口的矿卡。魔改驱动是怎么回事、核显输出方案、它到底适合干什么。</div>
+        </a>
+    </div>
+
+    <div class="group-title">嵌入式与电子</div>
+    <div class="group-note">从选芯片到接电机，实际会撞上的问题</div>
+    <div class="post-list">
+        <a href="stm32-embedded-notes.html" class="post-item">
+            <div class="post-title">从一块 STM32F401 说开：嵌入式入门绕不开的几件事</div>
+            <div class="post-meta">2026-09-19 · 硬件 · 嵌入式</div>
+            <div class="post-desc">时钟树的坑、SPL 与 HAL 的选择、I2C 为什么磨人、USB 虚拟串口的注意事项。</div>
+        </a>
+        <a href="mcu-selection-pitfalls.html" class="post-item">
+            <div class="post-title">MCU 选型与踩坑记录：比主频更该看的几件事</div>
+            <div class="post-meta">2026-09-20 · 硬件 · 嵌入式</div>
+            <div class="post-desc">外设数量比主频重要、时钟树为什么让串口乱码、I2C 扫总线的排查思路、传感器标定。</div>
+        </a>
+        <a href="esp32-variants.html" class="post-item">
+            <div class="post-title">ESP32 家族怎么选：C3、S3、C6 和经典版到底差在哪</div>
+            <div class="post-meta">2026-09-20 · 硬件 · 无线</div>
+            <div class="post-desc">四款芯片的官方规格对比、只有经典版有传统蓝牙、C6 的 Wi-Fi 6 为什么在 2.4G 上意义有限。</div>
+        </a>
+        <a href="esp32-wifi-modes.html" class="post-item">
+            <div class="post-title">ESP32 的 Wi-Fi 三种模式，以及单套射频带来的硬限制</div>
+            <div class="post-meta">2026-09-20 · 硬件 · 联网</div>
+            <div class="post-desc">STA / AP / STA+AP 各自适用什么，连接为什么要等一两秒，扫描为什么会打断热点。</div>
+        </a>
+        <a href="esp32-project-practice.html" class="post-item">
+            <div class="post-title">ESP32 项目实践：从能跑到稳定跑的几道坎</div>
+            <div class="post-meta">2026-09-20 · 硬件 · 联网</div>
+            <div class="post-desc">断线重连的退避策略、别让网络阻塞主循环、内存与堆碎片、OTA 分区与回滚。</div>
+        </a>
+        <a href="display-interfaces.html" class="post-item">
+            <div class="post-title">小屏接口怎么选：I2C、SPI、RGB 各自能干什么</div>
+            <div class="post-meta">2026-09-20 · 硬件 · 显示</div>
+            <div class="post-desc">算清 SPI 刷屏的理论上限、ST7789 的实际参数、RGB 接口为什么要外挂 PSRAM。</div>
+        </a>
+        <a href="bldc-esc-basics.html" class="post-item">
+            <div class="post-title">无刷电机与电调：KV 值、极对数和那几种油门协议</div>
+            <div class="post-meta">2026-09-20 · 硬件 · 动力</div>
+            <div class="post-desc">KV 值怎么算转速、极对数为什么要跟电调匹配、PWM 到 DShot 各版本的确切参数。</div>
+        </a>
+    </div>
+
+    <div class="group-title">生活</div>
+    <div class="group-note">厨房里的东西，做法和坑</div>
+    <div class="post-list">
+        <a href="egg-tart.html" class="post-item">
+            <div class="post-title">蛋挞：从零开始做一盘</div>
+            <div class="post-meta">2026-09-18 · 生活 · 做法</div>
+            <div class="post-desc">完整配方、六步流程、失败对照表。成败就三点：过筛、预热、温度够高。</div>
+        </a>
+    </div>
+
+    <div class="footer">ye1.cc.cd · ZYHS</div>
+</body>
+</html>
