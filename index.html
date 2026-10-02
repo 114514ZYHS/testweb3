@@ -144,6 +144,64 @@
   @media (prefers-reduced-motion: reduce) {
     * { animation: none !important; transition: none !important; }
   }
+
+  /* ===== 留言板 ===== */
+  .guestbook {
+    margin-top: 40px;
+    padding: 26px 24px 28px;
+    border-radius: var(--radius);
+    background: rgba(255,255,255,.07);
+    border: 1px solid rgba(255,255,255,.12);
+    backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+    box-shadow: 0 18px 44px -18px rgba(0,0,0,.6);
+    animation: rise .7s ease both;
+  }
+  .guestbook h2 {
+    font-size: 22px; font-weight: 800; margin-bottom: 4px;
+    background: linear-gradient(120deg, #ffffff, #c7d2fe 70%);
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+    display: inline-block;
+  }
+  .guestbook .gb-sub { color: rgba(255,255,255,.6); font-size: 13.5px; margin-bottom: 18px; }
+  .gb-form { display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px; }
+  .gb-row { display: flex; gap: 10px; flex-wrap: wrap; }
+  .gb-input, .gb-text {
+    font: inherit; font-size: 14px; color: #fff;
+    background: rgba(0,0,0,.28);
+    border: 1px solid rgba(255,255,255,.14);
+    border-radius: 12px; padding: 11px 13px;
+    transition: border-color .2s ease, box-shadow .2s ease;
+  }
+  .gb-input { flex: 1 1 180px; min-width: 0; }
+  .gb-text { resize: vertical; min-height: 72px; line-height: 1.6; }
+  .gb-input:focus, .gb-text:focus {
+    outline: none; border-color: rgba(129,140,248,.7);
+    box-shadow: 0 0 0 3px rgba(99,102,241,.22);
+  }
+  .gb-btn {
+    align-self: flex-start;
+    font: inherit; font-size: 14px; font-weight: 700; color: #fff;
+    border: 0; cursor: pointer; padding: 11px 22px; border-radius: 12px;
+    background: linear-gradient(135deg, #6366f1, #8b5cf6);
+    transition: transform .15s ease, filter .15s ease, opacity .15s ease;
+  }
+  .gb-btn:hover { transform: translateY(-2px); filter: brightness(1.08); }
+  .gb-btn:disabled { opacity: .55; cursor: not-allowed; transform: none; filter: none; }
+  .gb-status { font-size: 13px; min-height: 18px; margin-bottom: 14px; }
+  .gb-status.err { color: #fca5a5; }
+  .gb-status.ok { color: #86efac; }
+
+  .gb-list { display: flex; flex-direction: column; gap: 12px; }
+  .gb-item {
+    padding: 13px 15px; border-radius: 14px;
+    background: rgba(255,255,255,.05);
+    border: 1px solid rgba(255,255,255,.09);
+  }
+  .gb-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin-bottom: 5px; }
+  .gb-name { font-weight: 700; font-size: 14.5px; color: #c7d2fe; }
+  .gb-time { font-size: 11.5px; color: rgba(255,255,255,.45); flex: 0 0 auto; }
+  .gb-body { font-size: 14px; line-height: 1.65; color: rgba(255,255,255,.9); white-space: pre-wrap; word-break: break-word; }
+  .gb-empty { color: rgba(255,255,255,.5); font-size: 13.5px; padding: 6px 2px; }
 </style>
 </head>
 <body>
@@ -212,7 +270,88 @@
       </a>
     </main>
 
+    <section class="guestbook">
+      <h2>留言板</h2>
+      <div class="gb-sub">有话就说 · 留言存在 Cloudflare，全站通用</div>
+      <form class="gb-form" id="gbForm">
+        <div class="gb-row">
+          <input class="gb-input" id="gbName" maxlength="32" placeholder="昵称（最多 32 字）" autocomplete="nickname">
+        </div>
+        <textarea class="gb-text" id="gbText" maxlength="500" placeholder="说点什么吧～（最多 500 字）"></textarea>
+        <button class="gb-btn" id="gbSubmit" type="submit">发布留言</button>
+      </form>
+      <div class="gb-status" id="gbStatus"></div>
+      <div class="gb-list" id="gbList"></div>
+    </section>
+
     <footer>ye1.cc.cd · ZYHS</footer>
   </div>
+
+<script>
+(function () {
+  // 留言板后端：部署在 Cloudflare Pages 的 web3backroom 项目
+  // 若你给 CF 项目绑了自定义域名，把下面地址换成你的域名即可
+  const API = 'https://web3backroom.pages.dev/api/guestbook';
+  const $ = (id) => document.getElementById(id);
+  const form = $('gbForm'), nameI = $('gbName'), textI = $('gbText'),
+        btn = $('gbSubmit'), status = $('gbStatus'), list = $('gbList');
+
+  function fmt(ts) {
+    const d = new Date(ts), p = (n) => String(n).padStart(2, '0');
+    return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate()) + ' ' + p(d.getHours()) + ':' + p(d.getMinutes());
+  }
+  function setStatus(msg, type) {
+    status.textContent = msg || '';
+    status.className = 'gb-status' + (type ? ' ' + type : '');
+  }
+  function render(msgs) {
+    list.innerHTML = '';
+    if (!msgs || !msgs.length) {
+      const e = document.createElement('div'); e.className = 'gb-empty';
+      e.textContent = '还没有留言，来当第一个吧～';
+      list.appendChild(e); return;
+    }
+    for (const m of msgs) {
+      const item = document.createElement('div'); item.className = 'gb-item';
+      const head = document.createElement('div'); head.className = 'gb-head';
+      const nm = document.createElement('span'); nm.className = 'gb-name'; nm.textContent = m.name;   // textContent 防 XSS
+      const tm = document.createElement('span'); tm.className = 'gb-time'; tm.textContent = fmt(m.ts);
+      head.appendChild(nm); head.appendChild(tm);
+      const bd = document.createElement('div'); bd.className = 'gb-body'; bd.textContent = m.text;
+      item.appendChild(head); item.appendChild(bd);
+      list.appendChild(item);
+    }
+  }
+  async function load() {
+    try {
+      const r = await fetch(API, { cache: 'no-store' });
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      const data = await r.json();
+      render(data.messages || []);
+    } catch (e) {
+      render([]);
+      setStatus('留言加载失败（后端未联网或域名未生效），稍后刷新试试', 'err');
+    }
+  }
+  form.addEventListener('submit', async (ev) => {
+    ev.preventDefault();
+    const name = nameI.value.trim(), text = textI.value.trim();
+    if (!name || !text) { setStatus('昵称和留言都不能空', 'err'); return; }
+    btn.disabled = true; setStatus('发布中…');
+    try {
+      const r = await fetch(API, {
+        method: 'POST', headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ name, text }),
+      });
+      const data = await r.json().catch(() => ({}));
+      if (!r.ok || !data.ok) throw new Error(data.error || ('HTTP ' + r.status));
+      textI.value = ''; setStatus('发布成功 🎉', 'ok'); load();
+    } catch (e) {
+      setStatus(e.message || '发布失败，请稍后再试', 'err');
+    } finally { btn.disabled = false; }
+  });
+  load();
+})();
+</script>
 </body>
 </html>
