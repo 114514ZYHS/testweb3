@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>毒蘑菇 GPU 压力测试 - 工具箱 - ZYHS</title>
+<link rel="stylesheet" href="/theme.css">
+<style>
+* { box-sizing: border-box; }
+html, body { height: 100%; margin: 0; overflow: hidden; }
+body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", Roboto, sans-serif; color: var(--text); }
+#gl { position: fixed; inset: 0; width: 100%; height: 100%; display: block; z-index: 0; background: #05070a; touch-action: none; }
+
+.topbar {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 5;
+  display: flex; align-items: center; gap: 14px;
+  padding: 14px 18px;
+  background: linear-gradient(180deg, rgba(8,10,15,0.7), transparent);
+}
+.back-link { color: var(--accent-2); text-decoration: none; font-weight: 600; font-size: 14px; }
+.back-link:hover { text-decoration: underline; }
+.title { font-size: 15px; font-weight: 700; letter-spacing: .3px; }
+
+.hud {
+  position: fixed; top: 56px; left: 18px; z-index: 5;
+  background: var(--glass); border: 1px solid var(--border); border-radius: var(--radius-sm);
+  backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+  padding: 14px 16px; min-width: 200px;
+}
+.hud .fps { font-size: 30px; font-weight: 800; line-height: 1; font-variant-numeric: tabular-nums;
+  background: linear-gradient(120deg, #fff, #c7d2fe); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.hud .flabel { font-size: 12px; color: var(--muted); margin-bottom: 6px; }
+.hud .meta { font-size: 12px; color: var(--muted); margin-top: 10px; line-height: 1.7; word-break: break-all; }
+.hud .meta b { color: var(--text); font-weight: 600; }
+
+.panel {
+  position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%); z-index: 5;
+  display: flex; align-items: center; gap: 16px; flex-wrap: wrap; justify-content: center;
+  background: var(--glass); border: 1px solid var(--border); border-radius: var(--radius);
+  backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+  padding: 12px 18px; max-width: calc(100% - 36px);
+}
+.panel .ctrl { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--muted); }
+.panel input[type=range] { accent-color: var(--accent-2); width: 120px; }
+.panel .btn {
+  font: inherit; font-size: 13px; color: #fff; background: var(--accent); border: 1px solid var(--border);
+  padding: 8px 16px; border-radius: 10px; cursor: pointer; transition: transform .15s, background .2s;
+}
+.panel .btn:hover { transform: translateY(-1px); background: var(--accent-2); }
+.panel .btn.ghost { background: rgba(255,255,255,.06); }
+.hint { position: fixed; bottom: 18px; right: 18px; z-index: 5; font-size: 12px; color: var(--muted-2); text-align: right; line-height: 1.6; }
+
+.overlay {
+  position: fixed; inset: 0; z-index: 20; display: flex; align-items: center; justify-content: center;
+  background: rgba(5,7,10,0.82); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+}
+.overlay.hidden { display: none; }
+.warn {
+  max-width: 460px; margin: 20px; text-align: center;
+  background: var(--glass); border: 1px solid var(--border); border-radius: var(--radius);
+  backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); padding: 30px 28px;
+}
+.warn h2 { font-size: 22px; margin: 0 0 12px; }
+.warn p { color: var(--muted); font-size: 14px; line-height: 1.8; margin: 0 0 20px; text-align: left; }
+.warn .hl { color: #f87171; font-weight: 600; }
+.warn .start {
+  font: inherit; font-size: 16px; font-weight: 700; color: #fff;
+  background: linear-gradient(135deg, #f43f5e, #fb7185); border: none; padding: 12px 34px; border-radius: 12px; cursor: pointer;
+}
+.warn .start:hover { filter: brightness(1.08); }
+.fatal { position: fixed; inset: 0; z-index: 30; display: none; align-items: center; justify-content: center; padding: 30px; text-align: center; color: var(--muted); font-size: 15px; }
+</style>
+</head>
+<body>
+<canvas id="gl"></canvas>
+
+<div class="topbar">
+  <a href="index.html" class="back-link">← 工具箱</a>
+  <span class="title">毒蘑菇 GPU 压力测试</span>
+</div>
+
+<div class="hud">
+  <div class="flabel">实时帧率 FPS</div>
+  <div class="fps" id="fps">—</div>
+  <div class="meta" id="meta"></div>
+</div>
+
+<div class="panel">
+  <div class="ctrl">渲染分辨率
+    <input type="range" id="scale" min="0.3" max="1.5" step="0.1" value="1">
+  </div>
+  <button class="btn" id="toggle">暂停</button>
+  <button class="btn ghost" id="reset">重置视角</button>
+</div>
+
+<div class="hint">拖拽旋转 · 滚轮缩放<br>分辨率越高越烤</div>
+
+<div class="overlay" id="overlay">
+  <div class="warn">
+    <h2>⚠️ 开始烤机前请看</h2>
+    <p>本页用 WebGL 实时渲染曼德尔球（Mandelbulb）分形，会<span class="hl">把你的 GPU 推到接近满载</span>，产生大量热量、风扇狂转、耗电飙升，弱散热的设备可能触发降频甚至卡死。<br><br>
+    开始前请：保存手头工作、确保散热正常、笔记本接好电源。建议用 GPU-Z / 硬件监控观察温度，<span class="hl">别长时间无人看管地跑</span>。</p>
+    <button class="start" id="start">我懂了，开始烤</button>
+  </div>
+</div>
+
+<div class="fatal" id="fatal">你的浏览器不支持 WebGL2，无法运行毒蘑菇测试。请用较新的 Chrome / Edge / Firefox。</div>
+
+<script>
+(function () {
+  "use strict";
+  var canvas = document.getElementById("gl");
+  var gl = canvas.getContext("webgl2", { antialias: false, powerPreference: "high-performance" });
+  if (!gl) { document.getElementById("fatal").style.display = "flex"; document.getElementById("overlay").style.display = "none"; return; }
+
+  var VERT = "#version 300 es\nin vec2 p; void main(){ gl_Position = vec4(p,0.0,1.0); }";
+
+  var FRAG = [
+    "#version 300 es",
+    "precision highp float;",
+    "out vec4 fragColor;",
+    "uniform vec2 u_res;",
+    "uniform float u_time;",
+    "uniform vec2 u_rot;",
+    "uniform float u_zoom;",
+    "const int MAX_STEPS = 170;",
+    "const float MAX_DIST = 14.0;",
+    "const float SURF = 0.0009;",
+    "float de(vec3 pos, out float trap){",
+    "  vec3 z = pos; float dr = 1.0; float r = 0.0; trap = 1e10;",
+    "  for(int i=0;i<12;i++){",
+    "    r = length(z); if(r>2.0) break;",
+    "    float theta = acos(clamp(z.z/r,-1.0,1.0));",
+    "    float phi = atan(z.y, z.x);",
+    "    float zr = pow(r,8.0); dr = pow(r,7.0)*8.0*dr + 1.0;",
+    "    theta *= 8.0; phi *= 8.0;",
+    "    z = zr*vec3(sin(theta)*cos(phi), sin(theta)*sin(phi), cos(theta)) + pos;",
+    "    trap = min(trap, r);",
+    "  }",
+    "  return 0.5*log(r)*r/dr;",
+    "}",
+    "mat3 rot(vec2 a){ float cy=cos(a.x),sy=sin(a.x),cp=cos(a.y),sp=sin(a.y);",
+    "  return mat3(1,0,0, 0,cp,sp, 0,-sp,cp) * mat3(cy,0,sy, 0,1,0, -sy,0,cy); }",
+    "float deN(vec3 p, vec3 n){ float e=0.0012, t1,t2; return normalize(vec3(",
+    "  de(p+vec3(e,0,0),t1)-de(p-vec3(e,0,0),t2),",
+    "  de(p+vec3(0,e,0),t1)-de(p-vec3(0,e,0),t2),",
+    "  de(p+vec3(0,0,e),t1)-de(p-vec3(0,0,e),t2))).x; }",
+    "void main(){",
+    "  vec2 uv = (gl_FragCoord.xy - 0.5*u_res)/u_res.y;",
+    "  mat3 R = rot(u_rot);",
+    "  vec3 ro = R*vec3(0.0,0.0,u_zoom);",
+    "  vec3 fwd = normalize(-ro);",
+    "  vec3 right = normalize(cross(vec3(0,1,0), fwd));",
+    "  vec3 up = cross(fwd, right);",
+    "  vec3 rd = normalize(uv.x*right + uv.y*up + 1.25*fwd);",
+    "  float t = 0.0; float trap = 1e10; bool hit=false; int steps=0;",
+    "  for(int i=0;i<MAX_STEPS;i++){",
+    "    vec3 pp = ro + rd*t; float tr; float d = de(pp, tr);",
+    "    if(d < SURF){ hit=true; trap=tr; steps=i; break; }",
+    "    t += d; steps=i; if(t>MAX_DIST) break;",
+    "  }",
+    "  vec3 col = mix(vec3(0.02,0.03,0.06), vec3(0.0), length(uv)*0.8);",
+    "  if(hit){",
+    "    vec3 p = ro + rd*t; float tr; vec3 N = vec3(",
+    "      de(p+vec3(0.0012,0,0),tr)-de(p-vec3(0.0012,0,0),tr),",
+    "      de(p+vec3(0,0.0012,0),tr)-de(p-vec3(0,0.0012,0),tr),",
+    "      de(p+vec3(0,0,0.0012),tr)-de(p-vec3(0,0,0.0012),tr));",
+    "    N = normalize(N);",
+    "    vec3 L = normalize(vec3(0.6,0.8,0.4));",
+    "    float diff = clamp(dot(N,L),0.0,1.0);",
+    "    float fres = pow(1.0 - clamp(dot(N,-rd),0.0,1.0), 3.0);",
+    "    vec3 pal = 0.5 + 0.5*cos(6.2831*(vec3(0.0,0.33,0.67) + trap*1.6 + float(steps)*0.018 + u_time*0.04));",
+    "    col = pal*(0.22 + diff*0.95) + fres*vec3(0.4,0.6,1.0)*0.5;",
+    "  }",
+    "  col = pow(max(col,0.0), vec3(0.4545));",
+    "  fragColor = vec4(col, 1.0);",
+    "}"
+  ].join("\n");
+
+  function compile(type, src) {
+    var s = gl.createShader(type);
+    gl.shaderSource(s, src); gl.compileShader(s);
+    if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) {
+      console.error(gl.getShaderInfoLog(s)); throw new Error("shader compile failed");
+    }
+    return s;
+  }
+  var prog = gl.createProgram();
+  gl.attachShader(prog, compile(gl.VERTEX_SHADER, VERT));
+  gl.attachShader(prog, compile(gl.FRAGMENT_SHADER, FRAG));
+  gl.linkProgram(prog);
+  if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) { console.error(gl.getProgramInfoLog(prog)); document.getElementById("fatal").style.display = "flex"; return; }
+  gl.useProgram(prog);
+
+  var buf = gl.createBuffer();
+  gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,-1, 3,-1, -1,3]), gl.STATIC_DRAW);
+  var loc = gl.getAttribLocation(prog, "p");
+  gl.enableVertexAttribArray(loc);
+  gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
+
+  var u_res = gl.getUniformLocation(prog, "u_res");
+  var u_time = gl.getUniformLocation(prog, "u_time");
+  var u_rot = gl.getUniformLocation(prog, "u_rot");
+  var u_zoom = gl.getUniformLocation(prog, "u_zoom");
+
+  // 渲染器信息
+  var dbg = gl.getExtension("WEBGL_debug_renderer_info");
+  var renderer = dbg ? gl.getParameter(dbg.UNMASKED_RENDERER_WEBGL) : "未知";
+  document.getElementById("meta").innerHTML = "GPU：<b>" + String(renderer).replace(/</g, "&lt;") + "</b>";
+
+  var yaw = 0.4, pitch = 0.3, zoom = 2.6, scale = 1.0;
+  var running = false, raf = null, last = 0;
+  var frames = 0, fpsT = 0, fpsEl = document.getElementById("fps");
+
+  function resize() {
+    var dpr = Math.min(window.devicePixelRatio || 1, 2) * scale;
+    var w = Math.max(1, Math.floor(window.innerWidth * dpr));
+    var h = Math.max(1, Math.floor(window.innerHeight * dpr));
+    if (canvas.width !== w || canvas.height !== h) { canvas.width = w; canvas.height = h; }
+    gl.viewport(0, 0, w, h);
+  }
+  window.addEventListener("resize", resize);
+  resize();
+
+  function frame(ts) {
+    if (!running) return;
+    var dt = ts - last; last = ts;
+    yaw += 0.0016; // 自动慢转，保持 GPU 持续负载
+    gl.uniform2f(u_res, canvas.width, canvas.height);
+    gl.uniform1f(u_time, ts * 0.001);
+    gl.uniform2f(u_rot, yaw, pitch);
+    gl.uniform1f(u_zoom, zoom);
+    gl.drawArrays(gl.TRIANGLES, 0, 3);
+
+    frames++; fpsT += dt;
+    if (fpsT >= 500) { fpsEl.textContent = Math.round(frames * 1000 / fpsT); frames = 0; fpsT = 0; }
+    raf = requestAnimationFrame(frame);
+  }
+
+  // 交互
+  var dragging = false, lx = 0, ly = 0;
+  canvas.addEventListener("pointerdown", function (e) { dragging = true; lx = e.clientX; ly = e.clientY; canvas.setPointerCapture(e.pointerId); });
+  canvas.addEventListener("pointermove", function (e) {
+    if (!dragging) return;
+    yaw += (e.clientX - lx) * 0.006; pitch += (e.clientY - ly) * 0.006;
+    pitch = Math.max(-1.4, Math.min(1.4, pitch)); lx = e.clientX; ly = e.clientY;
+  });
+  canvas.addEventListener("pointerup", function () { dragging = false; });
+  canvas.addEventListener("wheel", function (e) {
+    e.preventDefault();
+    zoom = Math.max(1.3, Math.min(6.0, zoom + (e.deltaY > 0 ? 0.15 : -0.15)));
+  }, { passive: false });
+
+  document.getElementById("scale").addEventListener("input", function () { scale = parseFloat(this.value); resize(); });
+  document.getElementById("reset").addEventListener("click", function () { yaw = 0.4; pitch = 0.3; zoom = 2.6; });
+  var toggleBtn = document.getElementById("toggle");
+  toggleBtn.addEventListener("click", function () {
+    if (running) { running = false; if (raf) cancelAnimationFrame(raf); toggleBtn.textContent = "继续"; }
+    else { running = true; last = performance.now(); raf = requestAnimationFrame(frame); toggleBtn.textContent = "暂停"; }
+  });
+
+  document.getElementById("start").addEventListener("click", function () {
+    document.getElementById("overlay").classList.add("hidden");
+    running = true; last = performance.now(); raf = requestAnimationFrame(frame);
+  });
+})();
+</script>
+</body>
+</html>
