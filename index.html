@@ -5,155 +5,214 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>ZYHS 的主页</title>
 <style>
-    * { box-sizing: border-box; }
-    body {
-        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-        max-width: 800px;
-        margin: 40px auto;
-        padding: 0 20px;
-        background: #f0f2f5;
-        color: #1e1e1e;
-        position: relative;
-        min-height: 100vh;
+  :root {
+    --radius: 22px;
+    --gap: 16px;
+    --grad-1: linear-gradient(135deg, #6366f1, #8b5cf6);
+    --grad-2: linear-gradient(135deg, #f43f5e, #fb7185);
+    --grad-3: linear-gradient(135deg, #10b981, #14b8a6);
+    --grad-4: linear-gradient(135deg, #f59e0b, #f97316);
+    --grad-5: linear-gradient(135deg, #0ea5e9, #22d3ee);
+    --grad-6: linear-gradient(135deg, #d946ef, #a855f7);
+    --grad-7: linear-gradient(135deg, #84cc16, #22c55e);
+    --grad-8: linear-gradient(135deg, #ef4444, #f97316);
+    --grad-9: linear-gradient(135deg, #3b82f6, #6366f1);
+    --grad-10: linear-gradient(135deg, #14b8a6, #06b6d4);
+    --grad-11: linear-gradient(135deg, #a855f7, #ec4899);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { min-height: 100%; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", Roboto, sans-serif;
+    color: #fff;
+    padding: 56px 20px 88px;
+    position: relative;
+    background: #0b0d12;
+  }
+  /* 背景图 + 双层蒙层：渐变光晕 + 均匀压暗，观感统一 */
+  body::before {
+    content: "";
+    position: fixed; inset: 0; z-index: -2;
+    background: url("bg.png") center / cover no-repeat fixed;
+    background-color: #0b0d12;
+  }
+  body::after {
+    content: "";
+    position: fixed; inset: 0; z-index: -1;
+    background:
+      radial-gradient(120% 90% at 50% -10%, rgba(99,102,241,.28), transparent 55%),
+      radial-gradient(90% 70% at 90% 110%, rgba(236,72,153,.18), transparent 60%),
+      linear-gradient(180deg, rgba(8,10,15,.74), rgba(8,10,15,.88));
+  }
+  .wrap { max-width: 960px; margin: 0 auto; }
+
+  header { text-align: center; margin-bottom: 46px; animation: rise .7s ease both; }
+  .badge {
+    display: inline-flex; align-items: center; gap: 9px;
+    padding: 8px 18px; border-radius: 999px;
+    background: rgba(255,255,255,.08);
+    border: 1px solid rgba(255,255,255,.16);
+    backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+    font-size: 13.5px; color: rgba(255,255,255,.82);
+    margin-bottom: 24px;
+  }
+  .dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: #4ade80; box-shadow: 0 0 10px #4ade80;
+  }
+  h1 {
+    font-size: clamp(34px, 6vw, 58px);
+    font-weight: 800; letter-spacing: -1px; line-height: 1.1;
+    background: linear-gradient(120deg, #ffffff 8%, #c7d2fe 48%, #67e8f9 92%);
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+    margin-bottom: 14px;
+  }
+  .sub { color: rgba(255,255,255,.62); font-size: 16px; }
+
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(248px, 1fr));
+    gap: var(--gap);
+  }
+  .card {
+    position: relative; display: block; text-decoration: none;
+    padding: 24px 22px 22px;
+    border-radius: var(--radius);
+    background: rgba(255,255,255,.07);
+    border: 1px solid rgba(255,255,255,.12);
+    backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+    color: #fff; overflow: hidden;
+    transition: transform .28s cubic-bezier(.2,.7,.3,1), box-shadow .28s ease, background .28s ease, border-color .28s ease;
+    animation: rise .6s ease both;
+  }
+  .card::before {
+    content: ""; position: absolute; inset: 0; border-radius: inherit;
+    background: linear-gradient(135deg, rgba(255,255,255,.16), transparent 46%);
+    opacity: 0; transition: opacity .28s ease;
+  }
+  .card:hover {
+    transform: translateY(-7px) scale(1.015);
+    background: rgba(255,255,255,.12);
+    border-color: rgba(255,255,255,.30);
+    box-shadow: 0 22px 46px -14px rgba(0,0,0,.65), 0 0 0 1px rgba(129,140,248,.30);
+  }
+  .card:hover::before { opacity: 1; }
+  .ico {
+    width: 48px; height: 48px; border-radius: 15px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 22px; font-weight: 800; color: #fff; margin-bottom: 16px;
+    box-shadow: 0 10px 22px -8px rgba(0,0,0,.55);
+  }
+  .card .t { font-size: 18.5px; font-weight: 700; margin-bottom: 7px; letter-spacing: .2px; }
+  .card .d { font-size: 13.5px; color: rgba(255,255,255,.62); line-height: 1.55; }
+  .card.wide { grid-column: 1 / -1; }
+  .card.wide .d { max-width: 72%; }
+
+  .card:nth-child(1)  .ico { background: var(--grad-1); }
+  .card:nth-child(2)  .ico { background: var(--grad-2); }
+  .card:nth-child(3)  .ico { background: var(--grad-3); }
+  .card:nth-child(4)  .ico { background: var(--grad-4); }
+  .card:nth-child(5)  .ico { background: var(--grad-5); }
+  .card:nth-child(6)  .ico { background: var(--grad-6); }
+  .card:nth-child(7)  .ico { background: var(--grad-7); }
+  .card:nth-child(8)  .ico { background: var(--grad-8); }
+  .card:nth-child(9)  .ico { background: var(--grad-9); }
+  .card:nth-child(10) .ico { background: var(--grad-10); }
+  .card:nth-child(11) .ico { background: var(--grad-11); }
+
+  footer {
+    text-align: center; margin-top: 60px;
+    color: rgba(255,255,255,.42); font-size: 13px;
+    animation: rise .85s ease both;
+  }
+
+  @keyframes rise { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: none; } }
+
+  @media (prefers-color-scheme: dark) {
+    body::after {
+      background:
+        radial-gradient(120% 90% at 50% -10%, rgba(99,102,241,.24), transparent 55%),
+        radial-gradient(90% 70% at 90% 110%, rgba(236,72,153,.16), transparent 60%),
+        linear-gradient(180deg, rgba(6,8,12,.82), rgba(6,8,12,.93));
     }
-    body::before {
-        content: "";
-        position: fixed;
-        inset: 0;
-        /* 背景图 + 一层固定黑色蒙层。
-           以前是给整张图套 filter: brightness(0.42)，那是"把图调暗"，
-           亮的地方还是扎眼、暗的地方糊成一片。
-           改成半透明黑均匀压在图上，遮光度可控，观感也统一。 */
-        background:
-            linear-gradient(rgba(0, 0, 0, 0.62), rgba(0, 0, 0, 0.62)),
-            url("bg.png") center center / cover no-repeat;
-        background-color: #000000;
-        opacity: 1;
-        z-index: -1;
-        pointer-events: none;
-    }
-    h1 {
-        font-size: 32px;
-        font-weight: 600;
-        border-bottom: 2px solid #d0d7de;
-        padding-bottom: 12px;
-        margin-bottom: 8px;
-    }
-    .sub {
-        color: #57606a;
-        font-size: 16px;
-        margin-bottom: 30px;
-    }
-    .nav-grid {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 12px;
-    }
-    .nav-item {
-        display: block;
-        background: #ffffff;
-        border: 1px solid #d0d7de;
-        padding: 16px 20px;
-        text-decoration: none;
-        color: #0969da;
-        font-weight: 500;
-        transition: background 0.15s;
-        background: rgba(255, 255, 255, 0.82);
-    }
-    .nav-item:hover {
-        background: #f6f8fa;
-        background: rgba(246, 248, 250, 0.92);
-    }
-    .nav-item .desc {
-        display: block;
-        font-weight: normal;
-        font-size: 14px;
-        color: #57606a;
-        margin-top: 4px;
-    }
-    .nav-item.wide { grid-column: 1 / -1; }
-    .footer {
-        margin-top: 40px;
-        text-align: center;
-        font-size: 14px;
-        color: #8b949e;
-        border-top: 1px solid #d0d7de;
-        padding-top: 16px;
-    }
-    @media (prefers-color-scheme: dark) {
-        body { background: #0d1117; color: #c9d1d9; }
-        /* 🔴 这里以前放着 filter: brightness(0.32)，是个 bug，别加回来。
-           上面 body::before 已经用 linear-gradient 压了一层 62% 的黑蒙层，
-           filter 会把这层"蒙层+图"的合成结果再乘 0.32 —— 等于压到只剩约 12% 亮度，
-           暗色模式下背景图几乎全黑、看起来像"背景不显示了"。
-           暗色模式要更暗，就改蒙层的 alpha，别用 filter。 */
-        body::before {
-            background:
-                linear-gradient(rgba(0, 0, 0, 0.72), rgba(0, 0, 0, 0.72)),
-                url("bg.png") center center / cover no-repeat;
-        }
-        .nav-item { background: #161b22; border-color: #30363d; color: #58a6ff; background: rgba(22, 27, 34, 0.85); }
-        .nav-item:hover { background: #1c2128; background: rgba(28, 33, 40, 0.92); }
-        .nav-item .desc { color: #8b949e; }
-        .footer { border-top-color: #30363d; color: #8b949e; }
-        .sub { color: #8b949e; }
-    }
-    @media (max-width: 500px) {
-        .nav-grid { grid-template-columns: 1fr; }
-    }
+  }
+  @media (max-width: 560px) {
+    body { padding: 36px 16px 64px; }
+    .grid { grid-template-columns: 1fr; }
+    .card.wide .d { max-width: 100%; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    * { animation: none !important; transition: none !important; }
+  }
 </style>
 </head>
 <body>
-    <h1>ZYHS 的主页</h1>
-    <div class="sub">导航 · 全部页面托管于 GitHub Pages</div>
+  <div class="wrap">
+    <header>
+      <div class="badge"><span class="dot"></span> ye1.cc.cd · 全部页面托管于 GitHub Pages</div>
+      <h1>ZYHS 的主页</h1>
+      <div class="sub">一个导航页 · 把好用的东西都收在这里</div>
+    </header>
 
-    <div class="nav-grid">
-        <a href="/HTML/index.html" class="nav-item">
-            小游戏合集
-            <span class="desc">两百多个网页小游戏</span>
-        </a>
-        <a href="/Music/index.html" class="nav-item">
-            点歌台
-            <span class="desc">在线播放，点一下就放</span>
-        </a>
-        <a href="/Blog/index.html" class="nav-item">
-            Blog
-            <span class="desc">随笔与记录</span>
-        </a>
-        <a href="/Download/" class="nav-item">
-            下载中心
-            <span class="desc">浏览并下载文件</span>
-        </a>
-        <a href="/分片下载.html" class="nav-item">
-            分片下载
-            <span class="desc">大文件切分片并发拉取，浏览器端合成</span>
-        </a>
-        <a href="/TXT/index.html" class="nav-item">
-            小说阅读
-            <span class="desc">自动扫描 TXT · 可调字号 · 夜读模式 · 章节目录</span>
-        </a>
-        <a href="/我的世界网页/index.html" class="nav-item">
-            我的世界网页版
-            <span class="desc">1.5 / 1.8 / 1.12 三个版本可选</span>
-        </a>
-        <a href="/工具/2fa.html" class="nav-item">
-            F2A 验证器
-            <span class="desc">两步验证动态码 · 密钥只在本地计算</span>
-        </a>
-        <a href="/工具/index.html" class="nav-item">
-            工具箱
-            <span class="desc">测试台 · 验证器 · 二维码 · 加密 等 12 个小工具</span>
-        </a>
-        <a href="/工具/relay.html" class="nav-item wide">
-            Relay AI API Studio
-            <span class="desc">AI API 调试台 · 15 家服务商预设 · 流式输出 · 提示词库 · 联网搜索 · 密钥默认只在内存</span>
-        </a>
-        <a href="/学习/index.html" class="nav-item">
-            学习
-            <span class="desc">高中数学 · 物理 · 化学 · 生物 · 语文 · 英语</span>
-        </a>
-    </div>
+    <main class="grid">
+      <a href="/HTML/index.html" class="card">
+        <div class="ico">游</div>
+        <div class="t">小游戏合集</div>
+        <div class="d">两百多个网页小游戏，点开即玩</div>
+      </a>
+      <a href="/Music/index.html" class="card">
+        <div class="ico">歌</div>
+        <div class="t">点歌台</div>
+        <div class="d">在线播放，点一下就放</div>
+      </a>
+      <a href="/Blog/index.html" class="card">
+        <div class="ico">博</div>
+        <div class="t">Blog</div>
+        <div class="d">随笔与记录</div>
+      </a>
+      <a href="/Download/" class="card">
+        <div class="ico">下</div>
+        <div class="t">下载中心</div>
+        <div class="d">浏览并下载文件</div>
+      </a>
+      <a href="/分片下载.html" class="card">
+        <div class="ico">分</div>
+        <div class="t">分片下载</div>
+        <div class="d">大文件切分片并发拉取，浏览器端合成</div>
+      </a>
+      <a href="/TXT/index.html" class="card">
+        <div class="ico">书</div>
+        <div class="t">小说阅读</div>
+        <div class="d">自动扫描 TXT · 可调字号 · 夜读模式 · 章节目录</div>
+      </a>
+      <a href="/我的世界网页/index.html" class="card">
+        <div class="ico">世</div>
+        <div class="t">我的世界网页版</div>
+        <div class="d">1.5 / 1.8 / 1.12 三个版本可选</div>
+      </a>
+      <a href="/工具/2fa.html" class="card">
+        <div class="ico">安</div>
+        <div class="t">F2A 验证器</div>
+        <div class="d">两步验证动态码 · 密钥只在本地计算</div>
+      </a>
+      <a href="/工具/index.html" class="card">
+        <div class="ico">工</div>
+        <div class="t">工具箱</div>
+        <div class="d">测试台 · 验证器 · 二维码 · 加密 等 12 个小工具</div>
+      </a>
+      <a href="/工具/relay.html" class="card wide">
+        <div class="ico">智</div>
+        <div class="t">Relay AI API Studio</div>
+        <div class="d">AI API 调试台 · 15 家服务商预设 · 流式输出 · 提示词库 · 联网搜索 · 密钥默认只在内存</div>
+      </a>
+      <a href="/学习/index.html" class="card">
+        <div class="ico">学</div>
+        <div class="t">学习</div>
+        <div class="d">高中数学 · 物理 · 化学 · 生物 · 语文 · 英语</div>
+      </a>
+    </main>
 
-    <div class="footer">ye1.cc.cd · ZYHS</div>
+    <footer>ye1.cc.cd · ZYHS</footer>
+  </div>
 </body>
 </html>
