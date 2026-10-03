@@ -290,8 +290,8 @@
 <script>
 (function () {
   // 留言板后端：部署在 Cloudflare Worker 的 web3backroom 项目
-  // 默认 Worker 子域为 web3backroom.workers.dev；若你绑了自定义域名，把下面地址换成你的域名即可
-  const API = 'https://web3backroom.workers.dev/api/guestbook';
+  // 自定义域名 kv.ye1.cc.cd 已绑定，走这个地址
+  const API = 'https://kv.ye1.cc.cd/api/guestbook';
   const $ = (id) => document.getElementById(id);
   const form = $('gbForm'), nameI = $('gbName'), textI = $('gbText'),
         btn = $('gbSubmit'), status = $('gbStatus'), list = $('gbList');
