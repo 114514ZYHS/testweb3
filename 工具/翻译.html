@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>翻译 API 测试工具 - ZYHS</title>
+<link rel="stylesheet" href="/theme.css">
+<style>
+body { max-width: 880px; margin: 40px auto; padding: 0 20px; }
+.panel { background: var(--glass); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); box-shadow: 0 18px 44px -18px rgba(0,0,0,.55); }
+.field { margin-bottom: 14px; }
+label { display: block; font-size: 13px; color: var(--muted); margin-bottom: 6px; }
+textarea, select, input[type=text] {
+  width: 100%; font: inherit; font-size: 14px; color: #fff;
+  background: rgba(0,0,0,.28); border: 1px solid var(--border);
+  border-radius: 12px; padding: 11px 13px; transition: border-color .2s, box-shadow .2s;
+  box-sizing: border-box;
+}
+textarea { resize: vertical; min-height: 96px; line-height: 1.6; }
+textarea:focus, select:focus, input:focus { outline: none; border-color: rgba(129,140,248,.7); box-shadow: 0 0 0 3px rgba(99,102,241,.22); }
+.row { display: flex; gap: 12px; flex-wrap: wrap; }
+.row > .field { flex: 1 1 200px; margin-bottom: 14px; }
+.btn {
+  font: inherit; font-size: 14px; font-weight: 700; color: #fff; border: 0; cursor: pointer;
+  padding: 11px 26px; border-radius: 12px; background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  transition: transform .15s, filter .15s, opacity .15s;
+}
+.btn:hover { transform: translateY(-2px); filter: brightness(1.08); }
+.btn:disabled { opacity: .55; cursor: not-allowed; transform: none; filter: none; }
+.hide { display: none; }
+.status { font-size: 13px; min-height: 20px; margin: 14px 0 4px; }
+.status.ok { color: #86efac; } .status.err { color: #fca5a5; }
+.result { margin-top: 16px; }
+.box { border: 1px solid var(--border); border-radius: 12px; padding: 12px 14px; margin-bottom: 12px; background: rgba(0,0,0,.22); }
+.box h3 { font-size: 12px; letter-spacing: .5px; text-transform: uppercase; color: var(--muted); margin: 0 0 8px; }
+.req-line { font-size: 13px; line-height: 1.7; word-break: break-all; }
+.req-line .m { color: #fbbf24; font-weight: 700; }
+.req-line code { color: #c7d2fe; }
+.translated { font-size: 16px; line-height: 1.7; color: #fff; white-space: pre-wrap; word-break: break-word; }
+pre { margin: 0; font-size: 12.5px; line-height: 1.55; color: #d1d5db; white-space: pre-wrap; word-break: break-word; max-height: 320px; overflow: auto; }
+.pill { display: inline-block; font-size: 12px; padding: 2px 9px; border-radius: 999px; background: rgba(99,102,241,.18); color: #c7d2fe; border: 1px solid rgba(99,102,241,.35); }
+.note { margin-top: 18px; padding: 12px 16px; border: 1px solid var(--border); border-left: 3px solid #f59e0b; background: var(--glass); border-radius: 0 12px 12px 0; font-size: 13px; line-height: 1.8; color: var(--muted); }
+.note b { color: #fbbf24; }
+</style>
+</head>
+<body>
+<a href="index.html" class="back-link">← 返回工具箱</a>
+<h1>翻译 API 测试工具</h1>
+<div class="sub">实测各家翻译接口 · 展示请求 / 状态码 / 耗时 / 原始响应</div>
+
+<div class="panel">
+  <div class="field">
+    <label>待翻译文本</label>
+    <textarea id="src" placeholder="输入要翻译的内容…">Hello, this is a translation API test.</textarea>
+  </div>
+  <div class="row">
+    <div class="field">
+      <label>源语言</label>
+      <select id="sl"></select>
+    </div>
+    <div class="field">
+      <label>目标语言</label>
+      <select id="tl"></select>
+    </div>
+    <div class="field">
+      <label>服务商</label>
+      <select id="prov">
+        <option value="mymemory">MyMemory（免密钥）</option>
+        <option value="deepl">DeepL（需 Key）</option>
+      </select>
+    </div>
+  </div>
+  <div class="field hide" id="keyField">
+    <label>DeepL Auth Key</label>
+    <input type="text" id="key" placeholder="粘贴 DeepL API Key（形如 xxxx:fx）">
+  </div>
+  <button class="btn" id="go">发起测试</button>
+  <div class="status" id="status"></div>
+
+  <div class="result" id="result" style="display:none">
+    <div class="box">
+      <h3>请求</h3>
+      <div class="req-line" id="reqInfo"></div>
+    </div>
+    <div class="box">
+      <h3>翻译结果 <span class="pill" id="timePill"></span></h3>
+      <div class="translated" id="translated"></div>
+    </div>
+    <div class="box">
+      <h3>原始响应</h3>
+      <pre id="raw"></pre>
+    </div>
+  </div>
+</div>
+
+<div class="note">
+  <b>MyMemory</b>：免费、无需密钥，浏览器可直接跨域调用（每日约 5000 词额度，超限会返回提示）。<br>
+  <b>DeepL</b>：免费版走 <code>api-free.deepl.com</code>，填入 Auth Key 即用；若浏览器提示跨域(CORS)拦截，属 DeepL 接口限制，可改用服务端代理或 MyMemory。<br>
+  本工具仅做接口联调与结果查看，翻译内容会发往对应服务商。
+</div>
+
+<div class="footer">ye1.cc.cd · ZYHS</div>
+
+<script>
+// 语言表：mm=MyMemory 代码，dl=DeepL 代码
+const LANGS = [
+  { name: '中文(简体)', mm: 'zh-CN', dl: 'ZH' },
+  { name: '中文(繁体)', mm: 'zh-TW', dl: 'ZH' },
+  { name: '英语',       mm: 'en',    dl: 'EN' },
+  { name: '日语',       mm: 'ja',    dl: 'JA' },
+  { name: '韩语',       mm: 'ko',    dl: 'KO' },
+  { name: '法语',       mm: 'fr',    dl: 'FR' },
+  { name: '德语',       mm: 'de',    dl: 'DE' },
+  { name: '西班牙语',   mm: 'es',    dl: 'ES' },
+  { name: '俄语',       mm: 'ru',    dl: 'RU' },
+  { name: '葡萄牙语',   mm: 'pt',    dl: 'PT' },
+  { name: '意大利语',   mm: 'it',    dl: 'IT' },
+];
+const $ = (id) => document.getElementById(id);
+const sl = $('sl'), tl = $('tl');
+LANGS.forEach((l, i) => {
+  sl.add(new Option(l.name, i));
+  tl.add(new Option(l.name, i));
+});
+sl.value = '1';   // 英语
+tl.value = '0';   // 中文(简体)
+
+const prov = $('prov'), keyField = $('keyField');
+prov.addEventListener('change', () => {
+  keyField.classList.toggle('hide', prov.value !== 'deepl');
+});
+
+function setStatus(msg, type) {
+  const s = $('status');
+  s.textContent = msg || '';
+  s.className = 'status' + (type ? ' ' + type : '');
+}
+
+$('go').addEventListener('click', async () => {
+  const text = $('src').value.trim();
+  if (!text) { setStatus('先输入要翻译的文本', 'err'); return; }
+  const sv = LANGS[+sl.value], tv = LANGS[+tl.value];
+  const p = prov.value;
+  const btn = $('go'); btn.disabled = true; setStatus('请求中…');
+
+  let url, method = 'GET', body = null, headers = {};
+  if (p === 'mymemory') {
+    url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=${sv.mm}|${tv.mm}`;
+  } else {
+    const key = $('key').value.trim();
+    if (!key) { setStatus('DeepL 需要填写 Auth Key', 'err'); btn.disabled = false; return; }
+    url = 'https://api-free.deepl.com/v2/translate';
+    method = 'POST';
+    headers['Authorization'] = 'DeepL-Auth-Key ' + key;
+    headers['Content-Type'] = 'application/json';
+    body = JSON.stringify({ text: [text], source_lang: sv.dl, target_lang: tv.dl });
+  }
+
+  const t0 = performance.now();
+  try {
+    const resp = await fetch(url, { method, headers, body });
+    const ms = Math.round(performance.now() - t0);
+    let json = null;
+    try { json = await resp.json(); } catch (_) {}
+    let translated = '';
+    if (p === 'mymemory') {
+      translated = (json && json.responseData && json.responseData.translatedText) || '';
+      if (json && json.responseStatus && json.responseStatus !== 200) {
+        setStatus('接口返回异常：' + (json.responseDetails || json.responseStatus), 'err');
+      }
+    } else {
+      translated = (json && json.translations && json.translations[0] && json.translations[0].text) || '';
+    }
+    $('result').style.display = 'block';
+    $('reqInfo').innerHTML =
+      `<span class="m">${method}</span> <code>${url}</code>` +
+      (body ? `<br>body: <code>${body.replace(/</g, '&lt;')}</code>` : '');
+    $('timePill').textContent = resp.status + ' · ' + ms + ' ms';
+    $('translated').textContent = translated || '（未能从响应中提取译文，请看原始响应）';
+    $('raw').textContent = JSON.stringify(json, null, 2);
+    if (!translated) setStatus('请求完成，但未提取到译文', 'err');
+    else if (resp.ok) setStatus('成功 ✅', 'ok');
+  } catch (e) {
+    const ms = Math.round(performance.now() - t0);
+    $('result').style.display = 'block';
+    $('reqInfo').innerHTML = `<span class="m">${method}</span> <code>${url}</code>` + (body ? `<br>body: <code>${body.replace(/</g, '&lt;')}</code>` : '');
+    $('timePill').textContent = 'ERR · ' + ms + ' ms';
+    $('translated').textContent = '';
+    $('raw').textContent = '请求失败：' + (e && e.message ? e.message : e);
+    setStatus('请求失败（多为跨域 CORS 或服务不可达）', 'err');
+  } finally {
+    btn.disabled = false;
+  }
+});
+</script>
+</body>
+</html>
