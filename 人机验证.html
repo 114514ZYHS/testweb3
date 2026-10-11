@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>人机验证 · ye1.cc.cd</title>
+<link rel="stylesheet" href="/theme.css">
+<style>
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+    color: #fff;
+    background: #0b1020;
+    display: flex; align-items: center; justify-content: center;
+    padding: 24px;
+  }
+  .auth-card {
+    width: 100%; max-width: 460px;
+    padding: 34px 30px 32px;
+    border-radius: var(--radius, 22px);
+    background: rgba(255,255,255,.07);
+    border: 1px solid rgba(255,255,255,.12);
+    backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+    box-shadow: 0 24px 60px -20px rgba(0,0,0,.6);
+    text-align: center;
+    animation: rise .6s ease both;
+  }
+  .auth-card h1 {
+    font-size: 24px; font-weight: 800; margin: 0 0 6px;
+    background: linear-gradient(120deg, #ffffff, #c7d2fe 70%);
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+    display: inline-block;
+  }
+  .auth-sub { color: rgba(255,255,255,.62); font-size: 14px; margin-bottom: 22px; }
+  .ts-box { display: flex; justify-content: center; min-height: 66px; margin-bottom: 18px; }
+  .auth-status { font-size: 13.5px; min-height: 20px; margin-bottom: 14px; }
+  .auth-status.err { color: #fca5a5; }
+  .auth-status.ok { color: #86efac; }
+  .auth-back {
+    display: inline-block; margin-top: 6px;
+    font: inherit; font-size: 14px; font-weight: 700; color: #fff;
+    text-decoration: none; padding: 11px 22px; border-radius: 12px;
+    background: linear-gradient(135deg, #6366f1, #8b5cf6);
+    transition: transform .15s ease, filter .15s ease;
+  }
+  .auth-back:hover { transform: translateY(-2px); filter: brightness(1.08); }
+  @keyframes rise { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: none; } }
+  @media (prefers-reduced-motion: reduce) { * { animation: none !important; } }
+</style>
+</head>
+<body>
+  <div class="auth-card">
+    <h1>人机验证</h1>
+    <div class="auth-sub">完成验证后即可返回主页使用留言板（验证 10 分钟内有效）</div>
+    <div id="ts-box" class="ts-box"></div>
+    <div id="authStatus" class="auth-status"></div>
+    <a id="backHome" class="auth-back" href="/" hidden>← 返回主页</a>
+  </div>
+
+<script>
+(function () {
+  const API = 'https://kv.ye1.cc.cd';
+  const $ = (id) => document.getElementById(id);
+  const status = $('authStatus'), backHome = $('backHome'), tsBox = $('ts-box');
+
+  function setStatus(msg, type) {
+    status.textContent = msg || '';
+    status.className = 'auth-status' + (type ? ' ' + type : '');
+  }
+  function b64urlDecodeStr(s) {
+    s = s.replace(/-/g, '+').replace(/_/g, '/');
+    while (s.length % 4) s += '=';
+    const bin = atob(s);
+    const bytes = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+    return new TextDecoder().decode(bytes);
+  }
+  function getTicket() {
+    let t;
+    try { t = localStorage.getItem('gb_ticket'); } catch (_) { return null; }
+    if (!t) return null;
+    const p = t.split('.')[0];
+    try {
+      const obj = JSON.parse(b64urlDecodeStr(p));
+      if (!obj.exp || obj.exp < Date.now()) return null;
+      return t;
+    } catch (_) { return null; }
+  }
+
+  async function onTurnstileSuccess(token) {
+    setStatus('验证中…');
+    try {
+      const r = await fetch(API + '/api/verify', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ token }),
+      });
+      const data = await r.json().catch(() => ({}));
+      if (!r.ok || !data.ok) { setStatus(data.error || '验证失败', 'err'); return; }
+      try { localStorage.setItem('gb_ticket', data.ticket); } catch (_) {}
+      setStatus('验证成功 ✅ 正在返回主页…', 'ok');
+      backHome.hidden = false;
+      setTimeout(() => { location.href = '/'; }, 1200);
+    } catch (e) {
+      setStatus('验证请求失败，请刷新重试', 'err');
+    }
+  }
+  window.onTurnstileSuccess = onTurnstileSuccess;
+
+  async function init() {
+    if (getTicket()) {
+      setStatus('您已通过人机验证，可直接返回主页', 'ok');
+      backHome.hidden = false;
+      return;
+    }
+    try {
+      const cfg = await (await fetch(API + '/api/config')).json();
+      if (!cfg.turnstileSitekey) {
+        setStatus('服务端未配置 Turnstile，请联系管理员', 'err');
+        return;
+      }
+      const s = document.createElement('script');
+      s.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js';
+      s.onload = () => {
+        if (window.turnstile) {
+          turnstile.render(tsBox, {
+            sitekey: cfg.turnstileSitekey,
+            callback: onTurnstileSuccess,
+            'expired-callback': () => setStatus('验证已过期，请重新验证', 'err'),
+            'error-callback': () => setStatus('验证组件出错，请刷新页面', 'err'),
+          });
+        } else {
+          setStatus('验证组件加载失败，请刷新重试', 'err');
+        }
+      };
+      s.onerror = () => setStatus('无法加载验证组件（网络受限？）', 'err');
+      document.head.appendChild(s);
+    } catch (e) {
+      setStatus('加载验证组件失败，请刷新重试', 'err');
+    }
+  }
+  init();
+})();
+</script>
+</body>
+</html>

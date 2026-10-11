@@ -202,6 +202,20 @@
   .gb-time { font-size: 11.5px; color: rgba(255,255,255,.45); flex: 0 0 auto; }
   .gb-body { font-size: 14px; line-height: 1.65; color: rgba(255,255,255,.9); white-space: pre-wrap; word-break: break-word; }
   .gb-empty { color: rgba(255,255,255,.5); font-size: 13.5px; padding: 6px 2px; }
+  .gb-gate {
+    display: flex; flex-direction: column; align-items: center; gap: 12px;
+    padding: 26px 18px; border-radius: 16px; text-align: center;
+    background: rgba(0,0,0,.22); border: 1px dashed rgba(255,255,255,.18);
+  }
+  .gb-gate-ico { font-size: 34px; line-height: 1; }
+  .gb-gate-txt { color: rgba(255,255,255,.7); font-size: 13.5px; max-width: 320px; }
+  .gb-gate-btn {
+    font: inherit; font-size: 14px; font-weight: 700; color: #fff; text-decoration: none;
+    padding: 11px 22px; border-radius: 12px;
+    background: linear-gradient(135deg, #6366f1, #8b5cf6);
+    transition: transform .15s ease, filter .15s ease;
+  }
+  .gb-gate-btn:hover { transform: translateY(-2px); filter: brightness(1.08); }
 </style>
 </head>
 <body>
@@ -273,15 +287,22 @@
     <section class="guestbook">
       <h2>留言板</h2>
       <div class="gb-sub">有话就说 · 留言存在 Cloudflare，全站通用</div>
-      <form class="gb-form" id="gbForm">
-        <div class="gb-row">
-          <input class="gb-input" id="gbName" maxlength="32" placeholder="昵称（最多 32 字）" autocomplete="nickname">
-        </div>
-        <textarea class="gb-text" id="gbText" maxlength="500" placeholder="说点什么吧～（最多 500 字）"></textarea>
-        <button class="gb-btn" id="gbSubmit" type="submit">发布留言</button>
-      </form>
-      <div class="gb-status" id="gbStatus"></div>
-      <div class="gb-list" id="gbList"></div>
+      <div class="gb-gate" id="gbGate">
+        <div class="gb-gate-ico">🛡️</div>
+        <div class="gb-gate-txt">发留言前需先通过人机验证，防止垃圾留言刷屏</div>
+        <a class="gb-gate-btn" href="人机验证.html">前往人机验证 →</a>
+      </div>
+      <div id="gbPanel" hidden>
+        <form class="gb-form" id="gbForm">
+          <div class="gb-row">
+            <input class="gb-input" id="gbName" maxlength="32" placeholder="昵称（最多 32 字）" autocomplete="nickname">
+          </div>
+          <textarea class="gb-text" id="gbText" maxlength="500" placeholder="说点什么吧～（最多 500 字）"></textarea>
+          <button class="gb-btn" id="gbSubmit" type="submit">发布留言</button>
+        </form>
+        <div class="gb-status" id="gbStatus"></div>
+        <div class="gb-list" id="gbList"></div>
+      </div>
     </section>
 
     <footer>ye1.cc.cd · ZYHS</footer>
@@ -294,7 +315,31 @@
   const API = 'https://kv.ye1.cc.cd/api/guestbook';
   const $ = (id) => document.getElementById(id);
   const form = $('gbForm'), nameI = $('gbName'), textI = $('gbText'),
-        btn = $('gbSubmit'), status = $('gbStatus'), list = $('gbList');
+        btn = $('gbSubmit'), status = $('gbStatus'), list = $('gbList'),
+        gate = $('gbGate'), panel = $('gbPanel');
+
+  function b64urlDecodeStr(s) {
+    s = s.replace(/-/g, '+').replace(/_/g, '/');
+    while (s.length % 4) s += '=';
+    const bin = atob(s);
+    const bytes = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+    return new TextDecoder().decode(bytes);
+  }
+  function getTicket() {
+    let t; try { t = localStorage.getItem('gb_ticket'); } catch (_) { return null; }
+    if (!t) return null;
+    try {
+      const obj = JSON.parse(b64urlDecodeStr(t.split('.')[0]));
+      if (!obj.exp || obj.exp < Date.now()) return null;
+      return t;
+    } catch (_) { return null; }
+  }
+  function applyGate() {
+    const ok = !!getTicket();
+    gate.hidden = ok; panel.hidden = !ok;
+    return ok;
+  }
 
   function fmt(ts) {
     const d = new Date(ts), p = (n) => String(n).padStart(2, '0');
@@ -337,20 +382,30 @@
     ev.preventDefault();
     const name = nameI.value.trim(), text = textI.value.trim();
     if (!name || !text) { setStatus('昵称和留言都不能空', 'err'); return; }
+    const ticket = getTicket();
+    if (!ticket) { applyGate(); setStatus('验证已失效，请重新人机验证', 'err'); return; }
     btn.disabled = true; setStatus('发布中…');
     try {
       const r = await fetch(API, {
         method: 'POST', headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ name, text }),
+        body: JSON.stringify({ name, text, ticket }),
       });
       const data = await r.json().catch(() => ({}));
-      if (!r.ok || !data.ok) throw new Error(data.error || ('HTTP ' + r.status));
+      if (!r.ok || !data.ok) {
+        if (r.status === 403 || (data.error && /人机验证/.test(data.error))) {
+          try { localStorage.removeItem('gb_ticket'); } catch (_) {}
+          applyGate(); setStatus('验证已失效，请重新人机验证', 'err');
+        } else {
+          throw new Error(data.error || ('HTTP ' + r.status));
+        }
+        return;
+      }
       textI.value = ''; setStatus('发布成功 🎉', 'ok'); load();
     } catch (e) {
       setStatus(e.message || '发布失败，请稍后再试', 'err');
     } finally { btn.disabled = false; }
   });
-  load();
+  if (applyGate()) load();
 })();
 </script>
 </body>
